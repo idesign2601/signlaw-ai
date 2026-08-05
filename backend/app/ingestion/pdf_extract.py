@@ -118,9 +118,7 @@ class PdfExtractor:
             char_offset = 0
 
             for page_index in range(document.page_count):
-                page, char_offset = self._extract_page(
-                    document, page_index, char_offset, path.name
-                )
+                page, char_offset = self._extract_page(document, page_index, char_offset, path.name)
                 pages.append(page)
                 if page.extraction_confidence < self.ocr_confidence_threshold:
                     needing_ocr.append(page.page_number)
@@ -157,7 +155,7 @@ class PdfExtractor:
 
         try:
             raw = page.get_text("dict")
-        except Exception as exc:  # noqa: BLE001 — one bad page must not kill the document
+        except Exception as exc:
             logger.warning(
                 "page_extraction_failed",
                 filename=filename,

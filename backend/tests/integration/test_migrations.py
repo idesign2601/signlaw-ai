@@ -59,12 +59,10 @@ class TestSchemaExists:
             text("SELECT tablename FROM pg_tables WHERE schemaname = 'public'")
         )
         tables = {row[0] for row in result}
-        assert EXPECTED_TABLES <= tables
+        assert tables >= EXPECTED_TABLES
 
     async def test_enum_types_were_created(self, session: AsyncSession) -> None:
-        result = await session.execute(
-            text("SELECT typname FROM pg_type WHERE typtype = 'e'")
-        )
+        result = await session.execute(text("SELECT typname FROM pg_type WHERE typtype = 'e'"))
         types = {row[0] for row in result}
         assert {
             "doc_type",
@@ -126,9 +124,7 @@ class TestConstraintsAreEnforced:
         )
         assert status == "unknown"
 
-    async def test_self_referential_bylaw_relation_is_rejected(
-        self, session: AsyncSession
-    ) -> None:
+    async def test_self_referential_bylaw_relation_is_rejected(self, session: AsyncSession) -> None:
         document_id = uuid.uuid4()
         await session.execute(
             text(
@@ -150,9 +146,7 @@ class TestConstraintsAreEnforced:
             )
             await session.flush()
 
-    async def test_confidence_outside_zero_to_one_is_rejected(
-        self, session: AsyncSession
-    ) -> None:
+    async def test_confidence_outside_zero_to_one_is_rejected(self, session: AsyncSession) -> None:
         session_id = uuid.uuid4()
         await session.execute(
             text("INSERT INTO chat_session (id) VALUES (:id)"), {"id": session_id}
@@ -169,9 +163,7 @@ class TestConstraintsAreEnforced:
             )
             await session.flush()
 
-    async def test_deleting_a_document_cascades_to_chunks(
-        self, session: AsyncSession
-    ) -> None:
+    async def test_deleting_a_document_cascades_to_chunks(self, session: AsyncSession) -> None:
         # Admin delete must not strand chunks that would keep being retrieved.
         document_id, chunk_id = uuid.uuid4(), uuid.uuid4()
         await session.execute(
@@ -190,9 +182,7 @@ class TestConstraintsAreEnforced:
         )
         await session.flush()
 
-        await session.execute(
-            text("DELETE FROM document WHERE id = :id"), {"id": document_id}
-        )
+        await session.execute(text("DELETE FROM document WHERE id = :id"), {"id": document_id})
         await session.flush()
 
         remaining = await session.scalar(

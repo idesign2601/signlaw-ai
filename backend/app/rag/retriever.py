@@ -37,7 +37,7 @@ from app.db.enums import ChunkType, DocumentStatus
 from app.rag.fusion import reciprocal_rank_fusion
 from app.rag.results import RetrievalTrace, RetrievedChunk, SourceCoordinates
 
-__all__ = ["HybridRetriever", "RetrievalFilters", "RerankerProtocol"]
+__all__ = ["HybridRetriever", "RerankerProtocol", "RetrievalFilters"]
 
 logger = get_logger(__name__)
 
@@ -280,9 +280,7 @@ class HybridRetriever:
 
     # -- sparse --------------------------------------------------------------
 
-    async def _sparse_search(
-        self, query: str, filters: RetrievalFilters
-    ) -> list[RetrievedChunk]:
+    async def _sparse_search(self, query: str, filters: RetrievalFilters) -> list[RetrievedChunk]:
         if self.settings.sparse_top_k <= 0:
             return []
 
@@ -312,7 +310,7 @@ class HybridRetriever:
             rows = await self.session.execute(
                 sql, {**params, "query": query, "limit": self.settings.sparse_top_k}
             )
-        except Exception as exc:  # noqa: BLE001 — a malformed tsquery must not 500
+        except Exception as exc:
             logger.warning("sparse_search_failed", error=str(exc))
             return []
 
@@ -381,9 +379,7 @@ def _row_to_chunk(
         )
 
     raw_status = getattr(row, "document_status", None)
-    status = (
-        DocumentStatus(raw_status) if raw_status else DocumentStatus.UNKNOWN
-    )
+    status = DocumentStatus(raw_status) if raw_status else DocumentStatus.UNKNOWN
     raw_type = getattr(row, "chunk_type", None)
     chunk_type = ChunkType(raw_type) if raw_type else ChunkType.PROSE
 

@@ -98,14 +98,11 @@ def assess_page_text(text: str, *, min_chars: int) -> QualityReport:
             plausibility,
             confidence=round(plausibility * 0.8, 3),
             reason=(
-                f"only {plausibility:.0%} of words are plausible — "
-                "likely a failed character-map"
+                f"only {plausibility:.0%} of words are plausible — likely a failed character-map"
             ),
         )
 
-    confidence = round(
-        min(1.0, 0.55 + 0.25 * density + 0.20 * plausibility - bad_ratio), 3
-    )
+    confidence = round(min(1.0, 0.55 + 0.25 * density + 0.20 * plausibility - bad_ratio), 3)
     return QualityReport(char_count, bad_ratio, plausibility, confidence, "text layer is usable")
 
 

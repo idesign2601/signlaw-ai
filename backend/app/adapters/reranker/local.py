@@ -92,7 +92,7 @@ class LocalCrossEncoderReranker:
 
         try:
             scores = await asyncio.to_thread(self._score, model, pairs)
-        except Exception as exc:  # noqa: BLE001 — never fail a query on reranking
+        except Exception as exc:
             logger.warning("rerank_failed", error=str(exc), candidates=len(chunks))
             return list(chunks[:top_n])
 
@@ -126,9 +126,7 @@ class LocalCrossEncoderReranker:
         """
         parts: list[str] = []
         if chunk.section_number or chunk.section_heading:
-            label = " ".join(
-                part for part in (chunk.section_number, chunk.section_heading) if part
-            )
+            label = " ".join(part for part in (chunk.section_number, chunk.section_heading) if part)
             parts.append(label)
         parts.append(chunk.body[:_MAX_PASSAGE_CHARS])
         return "\n".join(parts)
@@ -173,7 +171,7 @@ class LocalCrossEncoderReranker:
                 max_length=self._max_length,
                 cache_folder=str(self._cache_dir) if self._cache_dir else None,
             )
-        except Exception as exc:  # noqa: BLE001 — degrade, do not fail
+        except Exception as exc:
             self._unavailable_reason = (
                 f"could not load '{self._model_name}': {exc}. Run `make fetch-models`."
             )
@@ -193,7 +191,7 @@ class LocalCrossEncoderReranker:
                 return "cuda"
             if torch.backends.mps.is_available():
                 return "mps"
-        except Exception:  # noqa: BLE001 — device probing must never be fatal
+        except Exception:
             pass
         return "cpu"
 

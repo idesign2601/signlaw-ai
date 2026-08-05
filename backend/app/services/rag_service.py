@@ -315,9 +315,7 @@ class RagService:
         # --- conflicting amendments -----------------------------------------
         conflicts = self._detect_conflicts(chunks)
         if conflicts and self.abstain_on_conflict:
-            return await self._finish(
-                trace, started, self._conflicted(conflicts, chunks, trace)
-            )
+            return await self._finish(trace, started, self._conflicted(conflicts, chunks, trace))
 
         # --- generation ------------------------------------------------------
         generation_started = time.perf_counter()
@@ -331,9 +329,7 @@ class RagService:
         except (LLMError, ExternalServiceError) as exc:
             logger.error("generation_unavailable", error=str(exc))
             trace.generation_ms = int((time.perf_counter() - generation_started) * 1000)
-            return await self._finish(
-                trace, started, self._generation_down(chunks, trace)
-            )
+            return await self._finish(trace, started, self._generation_down(chunks, trace))
 
         trace.generation_ms = synthesis.latency_ms
         trace.model_used = synthesis.model
@@ -358,9 +354,7 @@ class RagService:
 
         # An abstention produced by verification is a distinct outcome from one
         # produced by empty retrieval — the difference matters when debugging.
-        outcome = (
-            AnswerOutcome.UNVERIFIED if synthesis.abstained else AnswerOutcome.ANSWERED
-        )
+        outcome = AnswerOutcome.UNVERIFIED if synthesis.abstained else AnswerOutcome.ANSWERED
         trace.outcome = outcome
 
         return await self._finish(
@@ -431,13 +425,12 @@ class RagService:
                     chunk_types=filters.chunk_types,
                 ),
             )
-        except Exception:  # noqa: BLE001 — this probe must never fail the request
+        except Exception:
             return self._simple(AnswerOutcome.NO_RELEVANT_BYLAW, trace)
 
         outdated = tuple(
             dict.fromkeys(
-                f"{chunk.document_title or 'Untitled'} "
-                f"({chunk.document_status.value})"
+                f"{chunk.document_title or 'Untitled'} ({chunk.document_status.value})"
                 for chunk in stale_chunks
                 if chunk.document_status is not DocumentStatus.IN_FORCE
             )
@@ -449,8 +442,7 @@ class RagService:
             "I found bylaw text that addresses this, but only in documents that "
             "are superseded or repealed, so I will not answer from them. The "
             "current version may not be indexed. Contact the municipality to "
-            "confirm the rule in force.\n\nDocuments found: "
-            + "; ".join(outdated[:5])
+            "confirm the rule in force.\n\nDocuments found: " + "; ".join(outdated[:5])
         )
 
         trace.outcome = AnswerOutcome.ONLY_OUTDATED
@@ -540,9 +532,7 @@ class RagService:
                 continue
             if not chunk.section_number:
                 continue
-            groups.setdefault(
-                (chunk.municipality_slug, chunk.section_number), []
-            ).append(chunk)
+            groups.setdefault((chunk.municipality_slug, chunk.section_number), []).append(chunk)
 
         conflicts: list[ConflictDetail] = []
         for (municipality, section), members in groups.items():
@@ -551,9 +541,7 @@ class RagService:
                 continue
 
             titles = tuple(
-                dict.fromkeys(
-                    chunk.document_title or chunk.document_id for chunk in members
-                )
+                dict.fromkeys(chunk.document_title or chunk.document_id for chunk in members)
             )
             where = municipality or "an unidentified municipality"
             detail = (
@@ -604,7 +592,7 @@ class RagService:
         if self.trace_sink is not None:
             try:
                 await self.trace_sink.record(trace)
-            except Exception as exc:  # noqa: BLE001 — never fail an answer on audit
+            except Exception as exc:
                 logger.warning("trace_persist_failed", error=str(exc))
 
         logger.info(

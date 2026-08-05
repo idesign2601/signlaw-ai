@@ -29,7 +29,7 @@ logger = get_logger(__name__)
 class NullTraceSink:
     """Discards traces. Used by the CLI and by tests."""
 
-    async def record(self, trace: PipelineTrace) -> None:  # noqa: ARG002
+    async def record(self, trace: PipelineTrace) -> None:
         return None
 
 

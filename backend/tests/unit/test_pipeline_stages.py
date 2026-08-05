@@ -108,9 +108,7 @@ class TestResumeSkipsCompletedWork:
             "_stage_sections",
             "_stage_chunk",
         ):
-            monkeypatch.setattr(
-                pipeline, name, lambda _outcome, _name=name: called.append(_name)
-            )
+            monkeypatch.setattr(pipeline, name, lambda _outcome, _name=name: called.append(_name))
 
         outcome = pipeline.process(pdf)
         assert len(called) == 6
@@ -174,9 +172,7 @@ class TestFailureIsolation:
                 DocumentProcessingError("nope", stage="extracted")
             ),
         )
-        monkeypatch.setattr(
-            pipeline, "_stage_chunk", lambda _outcome: ran.append("chunk")
-        )
+        monkeypatch.setattr(pipeline, "_stage_chunk", lambda _outcome: ran.append("chunk"))
 
         pipeline.process(pdf)
         assert ran == []

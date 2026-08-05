@@ -53,9 +53,7 @@ class TestNaming:
         assert spec(index_version=2).name == "signlaw_bge_m3_v2"
 
     def test_different_models_get_different_names(self) -> None:
-        assert spec().name != spec(
-            embedding_model="intfloat/multilingual-e5-large"
-        ).name
+        assert spec().name != spec(embedding_model="intfloat/multilingual-e5-large").name
 
     def test_prefix_is_configurable(self) -> None:
         assert spec(prefix="bylaws").name == "bylaws_bge_m3_v1"

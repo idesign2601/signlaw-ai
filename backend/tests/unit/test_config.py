@@ -196,7 +196,9 @@ class TestProductionInvariants:
             "environment": Environment.PRODUCTION,
             "debug": False,
             "db": DatabaseSettings(password="a-real-production-password"),  # type: ignore[arg-type]
-            "security": SecuritySettings(admin_api_key="k" * 64, cors_origins=["https://app.example.com"]),  # type: ignore[arg-type]
+            "security": SecuritySettings(
+                admin_api_key="k" * 64, cors_origins=["https://app.example.com"]
+            ),  # type: ignore[arg-type]
             "observability": {"log_format": LogFormat.JSON},
         }
         base.update(overrides)

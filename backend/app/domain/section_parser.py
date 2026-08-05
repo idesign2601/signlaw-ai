@@ -78,9 +78,7 @@ SECTION_PATTERNS: tuple[SectionPattern, ...] = (
     # 5.3.1 Heading / 5.3 Heading / 5. Heading — the workhorse form.
     SectionPattern(
         name="numbered",
-        regex=re.compile(
-            r"^(?P<number>\d{1,3}(?:\.\d{1,3}){0,4})\.?\s+(?P<heading>\S.*)$"
-        ),
+        regex=re.compile(r"^(?P<number>\d{1,3}(?:\.\d{1,3}){0,4})\.?\s+(?P<heading>\S.*)$"),
         level=2,
         dynamic_level=True,
     ),
@@ -111,9 +109,7 @@ _MEASUREMENT_TAIL = re.compile(
     re.IGNORECASE,
 )
 
-_CROSS_REFERENCE = re.compile(
-    r"^(?:section|subsection|clause|part|schedule)\s", re.IGNORECASE
-)
+_CROSS_REFERENCE = re.compile(r"^(?:section|subsection|clause|part|schedule)\s", re.IGNORECASE)
 
 # Repeated page furniture that must not become a section.
 _PAGE_FURNITURE = re.compile(
@@ -211,11 +207,7 @@ class SectionParser:
             ):
                 continue
 
-            level = (
-                1 + number.count(".") + 1
-                if pattern.dynamic_level
-                else pattern.level
-            )
+            level = 1 + number.count(".") + 1 if pattern.dynamic_level else pattern.level
 
             return _Heading(
                 position=position,
@@ -413,9 +405,7 @@ class SectionParser:
         return result
 
     @staticmethod
-    def _heading_positions(
-        sections: list[ParsedSection], lines: Sequence[TextLine]
-    ) -> list[int]:
+    def _heading_positions(sections: list[ParsedSection], lines: Sequence[TextLine]) -> list[int]:
         """Recover each section's line index from its character offset."""
         offsets = {line.char_start: position for position, line in enumerate(lines)}
         return [offsets.get(section.char_start, 0) for section in sections]

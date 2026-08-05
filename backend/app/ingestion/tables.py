@@ -98,7 +98,7 @@ class TableExtractor:
         """Extract tables from a rendered page and strip them from the prose."""
         try:
             found = page.find_tables()
-        except Exception as exc:  # noqa: BLE001 — detection failure is not fatal
+        except Exception as exc:
             logger.warning(
                 "table_detection_failed",
                 filename=filename,
@@ -135,12 +135,10 @@ class TableExtractor:
 
     # -- internals -----------------------------------------------------------
 
-    def _build_table(
-        self, table: Any, page_number: int, ordinal: int
-    ) -> ExtractedTable | None:
+    def _build_table(self, table: Any, page_number: int, ordinal: int) -> ExtractedTable | None:
         try:
             raw_rows = table.extract()
-        except Exception:  # noqa: BLE001 — skip a table we cannot read
+        except Exception:
             return None
 
         rows = tuple(
@@ -202,9 +200,7 @@ class TableExtractor:
         return (x0, y0, x1, y1)
 
     @staticmethod
-    def _inside_any(
-        line: TextLine, boxes: Sequence[tuple[float, float, float, float]]
-    ) -> bool:
+    def _inside_any(line: TextLine, boxes: Sequence[tuple[float, float, float, float]]) -> bool:
         """Whether a line sits mostly within one of the table boxes.
 
         Removing these from the prose stream stops the same numbers being

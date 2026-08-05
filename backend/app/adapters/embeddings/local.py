@@ -185,7 +185,7 @@ class LocalEmbeddingProvider:
                 return "cuda"
             if torch.backends.mps.is_available():
                 return "mps"
-        except Exception:  # noqa: BLE001 — device probing must never be fatal
+        except Exception:
             pass
         return "cpu"
 
@@ -250,11 +250,9 @@ class LocalEmbeddingProvider:
             vector = await self.embed_query("health check")
         except EmbeddingError as exc:
             return False, exc.message
-        except Exception as exc:  # noqa: BLE001 — health checks never propagate
+        except Exception as exc:
             return False, str(exc)
 
         if len(vector) != self._dimensions:
-            return False, (
-                f"model returned {len(vector)} dimensions, expected {self._dimensions}"
-            )
+            return False, (f"model returned {len(vector)} dimensions, expected {self._dimensions}")
         return True, f"{self._model_name} ready ({self._dimensions}d)"

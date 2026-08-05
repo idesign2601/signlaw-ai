@@ -181,8 +181,10 @@ class TestEnums:
             (MetadataSource, {"filename", "regex", "llm", "human"}),
             (ChunkType, {"prose", "table", "definition", "schedule", "heading"}),
             (ConfidenceBand, {"high", "medium", "low", "insufficient"}),
-            (QueryIntent,
-             {"single_city", "multi_city_compare", "keyword", "definition", "out_of_scope"}),
+            (
+                QueryIntent,
+                {"single_city", "multi_city_compare", "keyword", "definition", "out_of_scope"},
+            ),
         ],
     )
     def test_enum_values_are_stable(self, enum_cls: type, expected: set[str]) -> None:

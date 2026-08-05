@@ -48,9 +48,7 @@ _DEFINITION_TERM = re.compile(
     re.MULTILINE,
 )
 
-_DEFINITIONS_HEADING = re.compile(
-    r"\b(?:definitions?|interpretation)\b", re.IGNORECASE
-)
+_DEFINITIONS_HEADING = re.compile(r"\b(?:definitions?|interpretation)\b", re.IGNORECASE)
 
 _PARAGRAPH_BREAK = re.compile(r"\n\s*\n")
 
@@ -290,9 +288,7 @@ class SectionChunker:
                 units.append(cleaned)
                 continue
             units.extend(
-                sentence.strip()
-                for sentence in _SENTENCE_BREAK.split(cleaned)
-                if sentence.strip()
+                sentence.strip() for sentence in _SENTENCE_BREAK.split(cleaned) if sentence.strip()
             )
         return units
 
@@ -404,9 +400,7 @@ class SectionChunker:
     ) -> ParsedSection | None:
         """Deepest section spanning the page a table sits on."""
         candidates = [
-            section
-            for section in sections
-            if section.page_start <= page_number <= section.page_end
+            section for section in sections if section.page_start <= page_number <= section.page_end
         ]
         if not candidates:
             return None

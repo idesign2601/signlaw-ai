@@ -45,7 +45,9 @@ def create_engine(settings: Settings) -> AsyncEngine:
             "server_settings": {"application_name": "signlaw-api"},
         },
     )
-    logger.info("database_engine_created", url=settings.db.safe_url, pool_size=settings.db.pool_size)
+    logger.info(
+        "database_engine_created", url=settings.db.safe_url, pool_size=settings.db.pool_size
+    )
     return engine
 
 
@@ -91,7 +93,7 @@ async def ping(engine: AsyncEngine) -> bool:
     try:
         async with engine.connect() as conn:
             await conn.execute(text("SELECT 1"))
-    except Exception as exc:  # noqa: BLE001 — health checks must not propagate
+    except Exception as exc:
         logger.warning("database_ping_failed", error=str(exc), error_type=type(exc).__name__)
         return False
     return True

@@ -22,7 +22,7 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from app.validation.harness import ValidationReport
 
-__all__ = ["ThresholdCheck", "evaluate_thresholds", "THRESHOLDS"]
+__all__ = ["THRESHOLDS", "ThresholdCheck", "evaluate_thresholds"]
 
 
 @dataclass(frozen=True, slots=True)
@@ -74,8 +74,7 @@ def evaluate_thresholds(report: ValidationReport) -> list[ThresholdCheck]:
         ThresholdCheck(
             "ingestion success",
             report.ingestion_success_rate >= MIN_INGESTION_SUCCESS,
-            f"{report.ingestion_success_rate:.0%} "
-            f"(need {MIN_INGESTION_SUCCESS:.0%})",
+            f"{report.ingestion_success_rate:.0%} (need {MIN_INGESTION_SUCCESS:.0%})",
         )
     )
 
@@ -97,8 +96,7 @@ def evaluate_thresholds(report: ValidationReport) -> list[ThresholdCheck]:
         ThresholdCheck(
             "embedding throughput",
             report.embedding_throughput >= MIN_EMBEDDING_THROUGHPUT,
-            f"{report.embedding_throughput:.1f} chunks/s "
-            f"(need {MIN_EMBEDDING_THROUGHPUT})",
+            f"{report.embedding_throughput:.1f} chunks/s (need {MIN_EMBEDDING_THROUGHPUT})",
             blocking=False,
         )
     )
@@ -124,8 +122,7 @@ def evaluate_thresholds(report: ValidationReport) -> list[ThresholdCheck]:
         ThresholdCheck(
             "answers carry citations",
             report.answers_with_citations >= MIN_ANSWERS_WITH_CITATIONS,
-            f"{report.answers_with_citations:.1%} "
-            f"(need {MIN_ANSWERS_WITH_CITATIONS:.0%})",
+            f"{report.answers_with_citations:.1%} (need {MIN_ANSWERS_WITH_CITATIONS:.0%})",
         )
     )
 
@@ -134,8 +131,7 @@ def evaluate_thresholds(report: ValidationReport) -> list[ThresholdCheck]:
         ThresholdCheck(
             "municipality precision",
             report.retrieval_precision >= MIN_RETRIEVAL_PRECISION,
-            f"{report.retrieval_precision:.1%} "
-            f"(need {MIN_RETRIEVAL_PRECISION:.0%})",
+            f"{report.retrieval_precision:.1%} (need {MIN_RETRIEVAL_PRECISION:.0%})",
         )
     )
 
@@ -177,8 +173,7 @@ def evaluate_thresholds(report: ValidationReport) -> list[ThresholdCheck]:
         ThresholdCheck(
             "behaviour accuracy",
             report.behaviour_accuracy >= MIN_BEHAVIOUR_ACCURACY,
-            f"{report.behaviour_accuracy:.1%} "
-            f"(need {MIN_BEHAVIOUR_ACCURACY:.0%})",
+            f"{report.behaviour_accuracy:.1%} (need {MIN_BEHAVIOUR_ACCURACY:.0%})",
         )
     )
 
@@ -218,6 +213,4 @@ def milestone_passed(report: ValidationReport) -> bool:
     Not sufficient on its own: factual correctness and confidence calibration
     are assessed by human spot check, which this cannot see.
     """
-    return all(
-        check.passed for check in evaluate_thresholds(report) if check.blocking
-    )
+    return all(check.passed for check in evaluate_thresholds(report) if check.blocking)

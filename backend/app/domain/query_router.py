@@ -63,10 +63,28 @@ _OUT_OF_SCOPE_TERMS = re.compile(
 )
 
 _SIGN_TYPES = (
-    "fascia", "awning", "canopy", "projecting", "freestanding", "pylon",
-    "monument", "billboard", "banner", "sandwich board", "a-frame", "portable",
-    "window", "roof", "marquee", "directional", "temporary", "real estate",
-    "construction", "digital", "electronic", "illuminated",
+    "fascia",
+    "awning",
+    "canopy",
+    "projecting",
+    "freestanding",
+    "pylon",
+    "monument",
+    "billboard",
+    "banner",
+    "sandwich board",
+    "a-frame",
+    "portable",
+    "window",
+    "roof",
+    "marquee",
+    "directional",
+    "temporary",
+    "real estate",
+    "construction",
+    "digital",
+    "electronic",
+    "illuminated",
 )
 
 # Zoning districts as written in BC bylaws: C-2, RS-1, CD-1, M1, RM-3.
@@ -174,9 +192,7 @@ class QueryRouter:
         return True
 
     @staticmethod
-    def _classify(
-        query: str, municipalities: tuple[MunicipalityRecord, ...]
-    ) -> QueryIntent:
+    def _classify(query: str, municipalities: tuple[MunicipalityRecord, ...]) -> QueryIntent:
         # Two or more cities plus a comparison marker is unambiguous. Two cities
         # without one usually still wants a comparison — "Surrey and Richmond
         # temporary sign rules" — so the city count leads.
@@ -204,8 +220,7 @@ class QueryRouter:
             if name in lowered and self.registry.is_ambiguous(name):
                 # Qualified forms resolve cleanly, so only flag the bare name.
                 qualified = any(
-                    prefix in lowered
-                    for prefix in ("city of", "township of", "district of")
+                    prefix in lowered for prefix in ("city of", "township of", "district of")
                 )
                 if not qualified:
                     found.append(name.title())

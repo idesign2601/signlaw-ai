@@ -102,9 +102,7 @@ class TestDomainErrors:
         assert response.headers["Retry-After"] == "30"
 
     async def test_every_error_carries_the_request_id(self, error_client: AsyncClient) -> None:
-        response = await error_client.get(
-            "/_test/not-found", headers={"X-Request-ID": "trace-me"}
-        )
+        response = await error_client.get("/_test/not-found", headers={"X-Request-ID": "trace-me"})
         assert response.json()["request_id"] == "trace-me"
         assert response.headers["X-Request-ID"] == "trace-me"
 
