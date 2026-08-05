@@ -6,7 +6,6 @@ build-backend = "setuptools.build_meta"
 name = "signlaw-ai"
 version = "0.1.0"
 description = "Citation-first retrieval over BC municipal sign bylaws"
-readme = "../README.md"
 requires-python = ">=3.12"
 license = { text = "Proprietary" }
 
