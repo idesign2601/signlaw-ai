@@ -1,0 +1,6 @@
+# Runtime data lives here and is never committed.
+#
+#   corpus/  the source bylaw PDFs (mount your own folder here, or point
+#            INGESTION__CORPUS_DIR somewhere else)
+#   blobs/   normalised copies produced by ingestion, including OCR output
+#   chroma/  the vector index when running Chroma in persistent mode

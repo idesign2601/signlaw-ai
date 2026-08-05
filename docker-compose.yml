@@ -1,0 +1,147 @@
+name: signlaw-ai
+
+x-backend-env: &backend-env
+  ENVIRONMENT: ${ENVIRONMENT:-local}
+  DEBUG: ${DEBUG:-false}
+  DB__HOST: postgres
+  DB__PORT: "5432"
+  DB__USER: ${DB__USER:-signlaw}
+  DB__PASSWORD: ${DB__PASSWORD:-signlaw}
+  DB__NAME: ${DB__NAME:-signlaw}
+  REDIS__HOST: redis
+  REDIS__PORT: "6379"
+  VECTOR__INDEX_VERSION: ${VECTOR__INDEX_VERSION:-1}
+  VECTOR__CHUNKING_VERSION: ${VECTOR__CHUNKING_VERSION:-1}
+  LLM__PROVIDER: ${LLM__PROVIDER:-ollama}
+  LLM__MODEL: ${LLM__MODEL:-qwen2.5:14b-instruct}
+  # host.docker.internal lets the container reach an Ollama running on the host.
+  LLM__OLLAMA_BASE_URL: ${LLM__OLLAMA_BASE_URL:-http://host.docker.internal:11434}
+  LLM__OPENAI_API_KEY: ${LLM__OPENAI_API_KEY:-}
+  LLM__ANTHROPIC_API_KEY: ${LLM__ANTHROPIC_API_KEY:-}
+  EMBEDDING__PROVIDER: ${EMBEDDING__PROVIDER:-local}
+  EMBEDDING__MODEL: ${EMBEDDING__MODEL:-BAAI/bge-m3}
+  EMBEDDING__OPENAI_API_KEY: ${EMBEDDING__OPENAI_API_KEY:-}
+  INGESTION__CORPUS_DIR: /data/corpus
+  INGESTION__BLOB_DIR: /data/blobs
+  INGESTION__TESSDATA_DIR: /models/tessdata
+  SECURITY__ADMIN_API_KEY: ${SECURITY__ADMIN_API_KEY:-}
+  OBSERVABILITY__LOG_FORMAT: ${OBSERVABILITY__LOG_FORMAT:-json}
+  OBSERVABILITY__LOG_LEVEL: ${OBSERVABILITY__LOG_LEVEL:-INFO}
+
+x-backend-volumes: &backend-volumes
+  - ${CORPUS_DIR:-./data/corpus}:/data/corpus:ro
+  - blobs:/data/blobs
+  # Every model weight — embeddings, reranker, Tesseract traineddata — lives
+  # here. Populate with `make fetch-models`; nothing is baked into the image.
+  - models:/models
+
+services:
+  postgres:
+    # pgvector's own image: stock postgres:16 does not ship the extension, and
+    # migration 0003 needs `CREATE EXTENSION vector`.
+    image: pgvector/pgvector:pg16
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${DB__USER:-signlaw}
+      POSTGRES_PASSWORD: ${DB__PASSWORD:-signlaw}
+      POSTGRES_DB: ${DB__NAME:-signlaw}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    ports:
+      - "${DB_PUBLISHED_PORT:-5432}:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB__USER:-signlaw} -d ${DB__NAME:-signlaw}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    command: ["redis-server", "--appendonly", "yes"]
+    volumes:
+      - redisdata:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  migrate:
+    build:
+      context: ./backend
+      target: runtime
+      args:
+        # Migrations need neither inference libraries nor OCR.
+        EXTRAS: core
+        WITH_OCR: "false"
+    environment: *backend-env
+    command: ["alembic", "upgrade", "head"]
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: "no"
+
+  api:
+    build:
+      context: ./backend
+      target: runtime
+      args:
+        # The API embeds the user's query and calls the LLM, so it needs the
+        # inference libraries. It never parses PDFs, so it gets no OCR stack.
+        EXTRAS: ${API_EXTRAS:-local}
+        WITH_OCR: "false"
+        # CPU-only torch by default; docker-compose.gpu.yml overrides to cuda.
+        TORCH_VARIANT: ${TORCH_VARIANT:-cpu}
+    restart: unless-stopped
+    environment: *backend-env
+    volumes: *backend-volumes
+    ports:
+      - "${API_PUBLISHED_PORT:-8000}:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://localhost:8000/healthz', timeout=3).status == 200 else 1)"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+  worker:
+    build:
+      context: ./backend
+      target: runtime
+      args:
+        # Only the worker parses PDFs, so only the worker carries the OCR
+        # binaries. Language data is still mounted, never baked in.
+        EXTRAS: ${WORKER_EXTRAS:-local}
+        WITH_OCR: "true"
+        TORCH_VARIANT: ${TORCH_VARIANT:-cpu}
+    restart: unless-stopped
+    environment: *backend-env
+    volumes: *backend-volumes
+    command: ["arq", "app.ingestion.worker.WorkerSettings"]
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    profiles: ["worker"]
+
+volumes:
+  pgdata:
+  redisdata:
+  blobs:
+  models:

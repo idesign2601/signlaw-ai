@@ -1,0 +1,44 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+.mypy_cache/
+.ruff_cache/
+.pytest_cache/
+.coverage
+coverage.xml
+htmlcov/
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# Data — never commit the corpus or derived stores.
+# `data/*` rather than `data/`: git will not descend into an ignored directory,
+# so the negation below would otherwise never apply.
+data/*
+!data/.gitkeep
+corpus/
+blobs/
+chroma/
+*.pdf
+!backend/tests/fixtures/**/*.pdf
+
+# Models cache
+.models/
+.cache/
+
+# Node
+node_modules/
+dist/
+.vite/
+*.tsbuildinfo
+
+# Editors / OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
