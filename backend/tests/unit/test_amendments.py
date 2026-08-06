@@ -97,16 +97,10 @@ class TestRepeal:
         # Bylaw numbers collide constantly across BC.
         resolved = LineageResolver(
             [
-                facts(
-                    "surrey-3452", number="3452", municipality="surrey", effective=date(1998, 1, 1)
-                ),
-                facts(
-                    "coq-4451",
-                    number="4451",
-                    municipality="coquitlam",
-                    effective=date(2019, 1, 1),
-                    repeals=("3452",),
-                ),
+                facts("surrey-3452", number="3452", municipality="surrey",
+                      effective=date(1998, 1, 1)),
+                facts("coq-4451", number="4451", municipality="coquitlam",
+                      effective=date(2019, 1, 1), repeals=("3452",)),
             ]
         ).resolve()
 
@@ -161,20 +155,10 @@ class TestAmendments:
         resolved = LineageResolver(
             [
                 facts("base", number="4451", effective=date(2015, 1, 1)),
-                facts(
-                    "a1",
-                    number="4600",
-                    doc_type=DocType.AMENDMENT,
-                    effective=date(2018, 3, 1),
-                    amends=("4451",),
-                ),
-                facts(
-                    "a2",
-                    number="4700",
-                    doc_type=DocType.AMENDMENT,
-                    effective=date(2021, 9, 1),
-                    amends=("4451",),
-                ),
+                facts("a1", number="4600", doc_type=DocType.AMENDMENT,
+                      effective=date(2018, 3, 1), amends=("4451",)),
+                facts("a2", number="4700", doc_type=DocType.AMENDMENT,
+                      effective=date(2021, 9, 1), amends=("4451",)),
             ]
         ).resolve()
 
@@ -201,7 +185,8 @@ class TestConservativeDefaults:
     def test_undated_version_never_displaces_a_dated_one(self) -> None:
         resolved = LineageResolver(
             [
-                facts("dated", consolidation=date(2020, 1, 1), doc_type=DocType.CONSOLIDATED),
+                facts("dated", consolidation=date(2020, 1, 1),
+                      doc_type=DocType.CONSOLIDATED),
                 facts("undated", year=None),
             ]
         ).resolve()
@@ -213,13 +198,8 @@ class TestNumberNormalisation:
         resolved = LineageResolver(
             [
                 facts("base", number="4451", effective=date(2010, 1, 1)),
-                facts(
-                    "amend",
-                    number="4600",
-                    doc_type=DocType.AMENDMENT,
-                    effective=date(2020, 1, 1),
-                    amends=("4451-2019",),
-                ),
+                facts("amend", number="4600", doc_type=DocType.AMENDMENT,
+                      effective=date(2020, 1, 1), amends=("4451-2019",)),
             ]
         ).resolve()
         base = next(item for item in resolved if item.document_id == "base")
@@ -229,16 +209,13 @@ class TestNumberNormalisation:
         resolver = LineageResolver(
             [
                 facts("base", number="0451", effective=date(2010, 1, 1)),
-                facts(
-                    "amend",
-                    number="4600",
-                    doc_type=DocType.AMENDMENT,
-                    effective=date(2020, 1, 1),
-                    amends=("451",),
-                ),
+                facts("amend", number="4600", doc_type=DocType.AMENDMENT,
+                      effective=date(2020, 1, 1), amends=("451",)),
             ]
         )
-        assert any(edge.relation_type is RelationType.AMENDS for edge in resolver.build_edges())
+        assert any(
+            edge.relation_type is RelationType.AMENDS for edge in resolver.build_edges()
+        )
 
 
 class TestEdges:
@@ -246,13 +223,8 @@ class TestEdges:
         edges = LineageResolver(
             [
                 facts("base", number="4451", effective=date(2010, 1, 1)),
-                facts(
-                    "amend",
-                    number="4600",
-                    doc_type=DocType.AMENDMENT,
-                    effective=date(2020, 1, 1),
-                    amends=("4451",),
-                ),
+                facts("amend", number="4600", doc_type=DocType.AMENDMENT,
+                      effective=date(2020, 1, 1), amends=("4451",)),
             ]
         ).build_edges()
 
@@ -269,7 +241,9 @@ class TestEdges:
         assert not [e for e in edges if e.relation_type is RelationType.AMENDS]
 
     def test_no_self_edges(self) -> None:
-        edges = LineageResolver([facts("doc", number="4451", amends=("4451",))]).build_edges()
+        edges = LineageResolver(
+            [facts("doc", number="4451", amends=("4451",))]
+        ).build_edges()
         assert all(e.parent_document_id != e.child_document_id for e in edges)
 
     def test_consolidation_edge_links_versions(self) -> None:
@@ -280,7 +254,9 @@ class TestEdges:
             ]
         ).build_edges()
 
-        consolidations = [e for e in edges if e.relation_type is RelationType.CONSOLIDATES]
+        consolidations = [
+            e for e in edges if e.relation_type is RelationType.CONSOLIDATES
+        ]
         assert len(consolidations) == 1
         assert consolidations[0].child_document_id == "new"
 

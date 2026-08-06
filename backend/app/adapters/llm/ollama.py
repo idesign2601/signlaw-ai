@@ -85,7 +85,9 @@ class OllamaProvider:
             "messages": [message.as_dict() for message in messages],
             "stream": False,
             "options": {
-                "temperature": (self._temperature if temperature is None else temperature),
+                "temperature": (
+                    self._temperature if temperature is None else temperature
+                ),
                 "num_predict": self._max_tokens if max_tokens is None else max_tokens,
                 "num_ctx": self._num_ctx,
             },
@@ -147,7 +149,9 @@ class OllamaProvider:
             "messages": [message.as_dict() for message in messages],
             "stream": True,
             "options": {
-                "temperature": (self._temperature if temperature is None else temperature),
+                "temperature": (
+                    self._temperature if temperature is None else temperature
+                ),
                 "num_predict": self._max_tokens if max_tokens is None else max_tokens,
                 "num_ctx": self._num_ctx,
             },
@@ -156,7 +160,9 @@ class OllamaProvider:
         try:
             async with (
                 httpx.AsyncClient(timeout=self._timeout_s) as client,
-                client.stream("POST", f"{self._base_url}/api/chat", json=payload) as response,
+                client.stream(
+                    "POST", f"{self._base_url}/api/chat", json=payload
+                ) as response,
             ):
                 response.raise_for_status()
                 async for line in response.aiter_lines():
@@ -267,7 +273,9 @@ class OllamaProvider:
         except httpx.HTTPError as exc:
             return False, f"cannot reach Ollama at {self._base_url}: {exc}"
 
-        available = {str(model.get("name", "")) for model in data.get("models", [])}
+        available = {
+            str(model.get("name", "")) for model in data.get("models", [])
+        }
         if not available:
             return False, "Ollama is running but no models are pulled"
 

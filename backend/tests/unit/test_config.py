@@ -146,7 +146,8 @@ class TestVectorStoreSettings:
         # Must match the operator class the HNSW index was built with, or the
         # index is silently not used.
         assert (
-            VectorStoreSettings(distance_metric="cosine").pgvector_ops_class == "vector_cosine_ops"
+            VectorStoreSettings(distance_metric="cosine").pgvector_ops_class
+            == "vector_cosine_ops"
         )
 
     def test_invalid_prefix_is_rejected(self) -> None:
@@ -205,9 +206,7 @@ class TestProductionInvariants:
             "environment": Environment.PRODUCTION,
             "debug": False,
             "db": DatabaseSettings(password="a-real-production-password"),  # type: ignore[arg-type]
-            "security": SecuritySettings(
-                admin_api_key="k" * 64, cors_origins=["https://app.example.com"]
-            ),  # type: ignore[arg-type]
+            "security": SecuritySettings(admin_api_key="k" * 64, cors_origins=["https://app.example.com"]),  # type: ignore[arg-type]
             "observability": {"log_format": LogFormat.JSON},
         }
         base.update(overrides)

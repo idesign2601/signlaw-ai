@@ -124,7 +124,9 @@ class AnswerSynthesizer:
                 started=started,
             )
 
-        system, user, context = build_answer_prompt(question, chunks, is_comparison=is_comparison)
+        system, user, context = build_answer_prompt(
+            question, chunks, is_comparison=is_comparison
+        )
 
         try:
             generation = await self.llm.generate(
@@ -158,7 +160,9 @@ class AnswerSynthesizer:
         model_answered = bool(parsed.get("answered", True))
 
         claims = self._extract_claims(parsed)
-        report = self.verifier.verify(answer_text, claims, chunks, source_map=context.source_map)
+        report = self.verifier.verify(
+            answer_text, claims, chunks, source_map=context.source_map
+        )
 
         if not model_answered or report.should_abstain:
             reason = (
@@ -291,10 +295,14 @@ class AnswerSynthesizer:
                     quote=claim.quote.strip(),
                     amendment_status=chunk.document_status.value,
                     consolidation_date=(
-                        chunk.consolidation_date.isoformat() if chunk.consolidation_date else None
+                        chunk.consolidation_date.isoformat()
+                        if chunk.consolidation_date
+                        else None
                     ),
                     last_amendment_date=(
-                        chunk.last_amendment_date.isoformat() if chunk.last_amendment_date else None
+                        chunk.last_amendment_date.isoformat()
+                        if chunk.last_amendment_date
+                        else None
                     ),
                     document_id=chunk.document_id,
                     chunk_id=chunk.chunk_id,

@@ -19,6 +19,7 @@ from sqlalchemy import (
     CheckConstraint,
     Date,
     DateTime,
+    Enum as SAEnum,
     Float,
     ForeignKey,
     Index,
@@ -28,9 +29,6 @@ from sqlalchemy import (
     UniqueConstraint,
     func,
     text,
-)
-from sqlalchemy import (
-    Enum as SAEnum,
 )
 from sqlalchemy.dialects.postgresql import ARRAY, JSONB
 from sqlalchemy.orm import Mapped, mapped_column, relationship
@@ -228,7 +226,9 @@ class Document(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     stage_updated_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     # Stage that raised, so a retry knows where to pick up.
     failed_stage: Mapped[ProcessingStage | None] = mapped_column(PROCESSING_STAGE_ENUM)
-    attempt_count: Mapped[int] = mapped_column(Integer, nullable=False, server_default=text("0"))
+    attempt_count: Mapped[int] = mapped_column(
+        Integer, nullable=False, server_default=text("0")
+    )
 
     indexed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     index_version: Mapped[int | None] = mapped_column(Integer, index=True)
@@ -303,7 +303,9 @@ class BylawRelation(UUIDPrimaryKeyMixin, TimestampMixin, Base):
             "relation_type",
             name="uq_bylaw_relation_edge",
         ),
-        CheckConstraint("parent_document_id <> child_document_id", name="no_self_relation"),
+        CheckConstraint(
+            "parent_document_id <> child_document_id", name="no_self_relation"
+        ),
         CheckConstraint("confidence >= 0 AND confidence <= 1", name="confidence_range"),
     )
 
@@ -426,7 +428,9 @@ class DocumentStageEvent(UUIDPrimaryKeyMixin, Base):
         ForeignKey("ingestion_job.id", ondelete="SET NULL"), index=True
     )
     stage: Mapped[ProcessingStage] = mapped_column(PROCESSING_STAGE_ENUM, nullable=False)
-    succeeded: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default=text("true"))
+    succeeded: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, server_default=text("true")
+    )
     duration_ms: Mapped[int | None] = mapped_column(Integer)
     error_code: Mapped[str | None] = mapped_column(String(80))
     error_message: Mapped[str | None] = mapped_column(Text)
@@ -584,7 +588,9 @@ class IngestionJob(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     skipped_documents: Mapped[int] = mapped_column(
         Integer, nullable=False, server_default=text("0")
     )
-    failed_documents: Mapped[int] = mapped_column(Integer, nullable=False, server_default=text("0"))
+    failed_documents: Mapped[int] = mapped_column(
+        Integer, nullable=False, server_default=text("0")
+    )
     total_chunks: Mapped[int] = mapped_column(Integer, nullable=False, server_default=text("0"))
 
     # One entry per failed document: filename, stage, error code, message.

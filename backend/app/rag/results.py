@@ -96,7 +96,9 @@ class RetrievedChunk:
         Such chunks are still usable as context but must not be presented as
         though they were an identifiable provision.
         """
-        return bool(self.municipality_slug and self.document_title and self.section_number)
+        return bool(
+            self.municipality_slug and self.document_title and self.section_number
+        )
 
     @property
     def is_current(self) -> bool:
@@ -139,7 +141,9 @@ class RetrievedChunk:
                 self.consolidation_date.isoformat() if self.consolidation_date else None
             ),
             "last_amendment_date": (
-                self.last_amendment_date.isoformat() if self.last_amendment_date else None
+                self.last_amendment_date.isoformat()
+                if self.last_amendment_date
+                else None
             ),
             "from_ocr": self.from_ocr,
             "dense_rank": self.dense_rank,

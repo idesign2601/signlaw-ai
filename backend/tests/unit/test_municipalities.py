@@ -49,7 +49,9 @@ class TestSlugify:
 
 
 class TestResolution:
-    @pytest.mark.parametrize("name", ["Coquitlam", "City of Coquitlam", "COQUITLAM", "coquitlam"])
+    @pytest.mark.parametrize(
+        "name", ["Coquitlam", "City of Coquitlam", "COQUITLAM", "coquitlam"]
+    )
     def test_common_forms_resolve(self, registry: MunicipalityRegistry, name: str) -> None:
         record = registry.resolve(name)
         assert record is not None
@@ -118,11 +120,15 @@ class TestFindInText:
         assert "north-vancouver-district" in slugs
         assert "vancouver" not in slugs
 
-    def test_new_westminster_is_not_westminster(self, registry: MunicipalityRegistry) -> None:
+    def test_new_westminster_is_not_westminster(
+        self, registry: MunicipalityRegistry
+    ) -> None:
         found = registry.find_in_text("City of New Westminster Sign Bylaw")
         assert [record.slug for record in found] == ["new-westminster"]
 
-    def test_multiple_municipalities_are_all_reported(self, registry: MunicipalityRegistry) -> None:
+    def test_multiple_municipalities_are_all_reported(
+        self, registry: MunicipalityRegistry
+    ) -> None:
         found = registry.find_in_text("Comparing Surrey and Richmond regulations")
         assert {record.slug for record in found} == {"surrey", "richmond"}
 

@@ -72,9 +72,13 @@ class TestResolution:
             report.invalid_claims[0].failure_reason or ""
         )
 
-    def test_source_map_pointing_at_a_missing_chunk(self, verifier: CitationVerifier) -> None:
+    def test_source_map_pointing_at_a_missing_chunk(
+        self, verifier: CitationVerifier
+    ) -> None:
         claim = CitationClaim(1, "must not exceed", "x")
-        report = verifier.verify("text [S1]", [claim], [chunk("other")], source_map={1: "c1"})
+        report = verifier.verify(
+            "text [S1]", [claim], [chunk("other")], source_map={1: "c1"}
+        )
         assert not report.valid_claims
 
 
@@ -84,7 +88,9 @@ class TestQuoteVerification:
         report = verifier.verify("x [S1]", [claim], [chunk()], source_map={1: "c1"})
         assert report.valid_claims
 
-    def test_whitespace_differences_are_tolerated(self, verifier: CitationVerifier) -> None:
+    def test_whitespace_differences_are_tolerated(
+        self, verifier: CitationVerifier
+    ) -> None:
         # PDF extraction inserts line breaks that mean nothing to the match.
         claim = CitationClaim(1, "must   not\n exceed twenty percent", "x")
         report = verifier.verify("x [S1]", [claim], [chunk()], source_map={1: "c1"})
@@ -97,7 +103,9 @@ class TestQuoteVerification:
 
     def test_paraphrase_is_rejected(self, verifier: CitationVerifier) -> None:
         # A reworded "quote" is not evidence, however accurate the paraphrase.
-        claim = CitationClaim(1, "fascia signs are capped at one fifth of the wall area", "x")
+        claim = CitationClaim(
+            1, "fascia signs are capped at one fifth of the wall area", "x"
+        )
         report = verifier.verify("x [S1]", [claim], [chunk()], source_map={1: "c1"})
         assert not report.valid_claims
         assert "does not appear" in (report.invalid_claims[0].failure_reason or "")
@@ -121,7 +129,9 @@ class TestQuoteVerification:
 
 
 class TestNumericGrounding:
-    def test_number_present_in_the_source_passes(self, verifier: CitationVerifier) -> None:
+    def test_number_present_in_the_source_passes(
+        self, verifier: CitationVerifier
+    ) -> None:
         claim = CitationClaim(1, "must not exceed twenty percent (20%)", "x")
         report = verifier.verify(
             "A fascia sign must not exceed 20% of the building face [S1].",
@@ -132,7 +142,9 @@ class TestNumericGrounding:
         assert not report.ungrounded_numbers
         assert not report.should_abstain
 
-    def test_fabricated_dimension_forces_abstention(self, verifier: CitationVerifier) -> None:
+    def test_fabricated_dimension_forces_abstention(
+        self, verifier: CitationVerifier
+    ) -> None:
         # The most damaging error available: a plausible number nobody wrote.
         claim = CitationClaim(1, "must not exceed twenty percent (20%)", "x")
         report = verifier.verify(
@@ -144,7 +156,9 @@ class TestNumericGrounding:
         assert "6.5" in " ".join(report.ungrounded_numbers)
         assert report.should_abstain
 
-    def test_years_are_not_treated_as_dimensions(self, verifier: CitationVerifier) -> None:
+    def test_years_are_not_treated_as_dimensions(
+        self, verifier: CitationVerifier
+    ) -> None:
         claim = CitationClaim(1, "must not exceed twenty percent (20%)", "x")
         report = verifier.verify(
             "Under the 2019 bylaw, a fascia sign must not exceed 20% [S1].",
@@ -154,7 +168,9 @@ class TestNumericGrounding:
         )
         assert not report.ungrounded_numbers
 
-    def test_bylaw_numbers_are_not_treated_as_dimensions(self, verifier: CitationVerifier) -> None:
+    def test_bylaw_numbers_are_not_treated_as_dimensions(
+        self, verifier: CitationVerifier
+    ) -> None:
         claim = CitationClaim(1, "must not exceed twenty percent (20%)", "x")
         report = verifier.verify(
             "Bylaw No. 13743 requires that signs must not exceed 20% [S1].",
@@ -164,7 +180,9 @@ class TestNumericGrounding:
         )
         assert not report.ungrounded_numbers
 
-    def test_grounding_is_skipped_without_citations(self, verifier: CitationVerifier) -> None:
+    def test_grounding_is_skipped_without_citations(
+        self, verifier: CitationVerifier
+    ) -> None:
         report = verifier.verify("Signs may be 3 metres tall.", [], [chunk()], source_map={})
         assert report.ungrounded_numbers == []
 
@@ -191,7 +209,9 @@ class TestUncitedClaims:
         )
         assert not report.uncited_claims
 
-    def test_descriptive_sentences_need_no_citation(self, verifier: CitationVerifier) -> None:
+    def test_descriptive_sentences_need_no_citation(
+        self, verifier: CitationVerifier
+    ) -> None:
         claim = CitationClaim(1, "must not exceed twenty percent (20%)", "x")
         report = verifier.verify(
             "A fascia sign must not exceed 20% [S1]. This applies in Coquitlam.",
@@ -203,7 +223,9 @@ class TestUncitedClaims:
 
 
 class TestAbstention:
-    def test_rules_asserted_with_no_valid_citation(self, verifier: CitationVerifier) -> None:
+    def test_rules_asserted_with_no_valid_citation(
+        self, verifier: CitationVerifier
+    ) -> None:
         report = verifier.verify(
             "Fascia signs must not exceed 20% of the building face.",
             [],
@@ -263,7 +285,9 @@ class TestReporting:
             CitationClaim(1, "must not exceed twenty percent", "a"),
             CitationClaim(1, "shall project more than 0.3 metres", "b"),
         ]
-        report = verifier.verify("text [S1]", claims, [chunk()], source_map={1: "c1"})
+        report = verifier.verify(
+            "text [S1]", claims, [chunk()], source_map={1: "c1"}
+        )
         assert report.cited_chunk_ids == ("c1",)
 
     def test_report_serialises(self, verifier: CitationVerifier) -> None:
@@ -272,5 +296,7 @@ class TestReporting:
         assert "citation_precision" in payload
         assert "should_abstain" in payload
 
-    def test_precision_with_no_citations_is_zero(self, verifier: CitationVerifier) -> None:
+    def test_precision_with_no_citations_is_zero(
+        self, verifier: CitationVerifier
+    ) -> None:
         assert verifier.verify("text", [], [chunk()], source_map={}).citation_precision == 0.0

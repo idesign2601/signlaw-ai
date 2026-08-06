@@ -25,7 +25,7 @@ from __future__ import annotations
 
 import hashlib
 import time
-from collections.abc import Callable, Iterator
+from collections.abc import Callable, Iterator, Sequence
 from dataclasses import dataclass, field
 from pathlib import Path
 
@@ -78,7 +78,9 @@ def discover_pdfs(root: Path, *, max_size_bytes: int | None = None) -> Iterator[
     "it stopped at 120" a reproducible statement.
     """
     if not root.exists():
-        raise DocumentProcessingError(f"Corpus directory does not exist: {root}", stage="discovery")
+        raise DocumentProcessingError(
+            f"Corpus directory does not exist: {root}", stage="discovery"
+        )
 
     for path in sorted(root.rglob("*")):
         if not path.is_file() or path.suffix.lower() != ".pdf":
@@ -145,7 +147,9 @@ class DocumentOutcome:
 
     @property
     def failed_stage(self) -> ProcessingStage | None:
-        return next((result.stage for result in self.stage_results if not result.succeeded), None)
+        return next(
+            (result.stage for result in self.stage_results if not result.succeeded), None
+        )
 
     @property
     def was_ocred(self) -> bool:
@@ -198,7 +202,9 @@ class DocumentPipeline:
             detect_typographic_headings=self.config.detect_typographic_headings
         )
         self.chunker = SectionChunker(self.config.chunking)
-        self.detector = MetadataDetector(registry=self.registry, head_pages=self.config.head_pages)
+        self.detector = MetadataDetector(
+            registry=self.registry, head_pages=self.config.head_pages
+        )
 
     def process(
         self, path: Path, *, resume_from: ProcessingStage = ProcessingStage.UPLOADED
@@ -208,7 +214,9 @@ class DocumentPipeline:
         Never raises for a per-document failure: the error is recorded on the
         outcome so the run continues.
         """
-        outcome = DocumentOutcome(path=path, sha256=hash_file(path), stage=ProcessingStage.UPLOADED)
+        outcome = DocumentOutcome(
+            path=path, sha256=hash_file(path), stage=ProcessingStage.UPLOADED
+        )
 
         stages: tuple[tuple[ProcessingStage, Callable[[DocumentOutcome], None]], ...] = (
             (ProcessingStage.EXTRACTED, self._stage_extract),
@@ -311,7 +319,9 @@ class DocumentPipeline:
     def _stage_extract(self, outcome: DocumentOutcome) -> None:
         result = self.extractor.extract(outcome.path)
         outcome.pages = result.pages
-        outcome.metadata = outcome.metadata.merged_with(DocumentMetadata(title=result.title))
+        outcome.metadata = outcome.metadata.merged_with(
+            DocumentMetadata(title=result.title)
+        )
 
     def _stage_ocr(self, outcome: DocumentOutcome) -> None:
         """OCR only the pages whose text layer failed the quality gate."""
@@ -326,16 +336,21 @@ class DocumentPipeline:
         if not needing:
             return
 
-        ocr_result = self.ocr.ocr_pages(outcome.path, needing, filename=outcome.path.name)
+        ocr_result = self.ocr.ocr_pages(
+            outcome.path, needing, filename=outcome.path.name
+        )
         if ocr_result.skipped:
             return
 
         outcome.pages = tuple(
-            self._prefer_ocr(page, ocr_result.pages.get(page.page_number)) for page in outcome.pages
+            self._prefer_ocr(page, ocr_result.pages.get(page.page_number))
+            for page in outcome.pages
         )
 
     @staticmethod
-    def _prefer_ocr(original: ExtractedPage, ocred: ExtractedPage | None) -> ExtractedPage:
+    def _prefer_ocr(
+        original: ExtractedPage, ocred: ExtractedPage | None
+    ) -> ExtractedPage:
         """Keep whichever version of a page is actually better.
 
         OCR output that scores no better than the broken text layer is discarded

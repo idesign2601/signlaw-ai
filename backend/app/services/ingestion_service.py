@@ -34,7 +34,7 @@ from app.domain.municipalities import MunicipalityRegistry
 from app.ingestion.pipeline import DocumentOutcome, DocumentPipeline, PipelineConfig
 from app.rag.collections import CollectionSpec
 
-__all__ = ["IngestResult", "IngestionService"]
+__all__ = ["IngestionService", "IngestResult"]
 
 logger = get_logger(__name__)
 
@@ -84,7 +84,9 @@ class IngestionService:
 
     # -- public API ----------------------------------------------------------
 
-    async def ingest_paths(self, paths: Sequence[Path], *, force: bool = False) -> IngestResult:
+    async def ingest_paths(
+        self, paths: Sequence[Path], *, force: bool = False
+    ) -> IngestResult:
         """Ingest one or more PDFs and make them retrievable."""
         collection_id, spec = await self._ensure_collection()
         result = IngestResult(collection_name=spec.name)
@@ -212,7 +214,9 @@ class IngestionService:
                 "is_scanned": outcome.was_ocred,
                 "ocr_applied": outcome.was_ocred,
                 "quality": round(outcome.mean_extraction_confidence, 3),
-                "metadata_source": (metadata.source.value if metadata.source else ""),
+                "metadata_source": (
+                    metadata.source.value if metadata.source else ""
+                ),
                 "metadata_confidence": metadata.confidence,
                 "stage": ProcessingStage.CHUNKED.value,
                 "now": datetime.now(UTC),
@@ -241,7 +245,9 @@ class IngestionService:
         if record is None:
             return None
 
-        province_id = await self.session.scalar(text("SELECT id FROM province WHERE code = 'BC'"))
+        province_id = await self.session.scalar(
+            text("SELECT id FROM province WHERE code = 'BC'")
+        )
         municipality_id = uuid.uuid4()
 
         await self.session.execute(
@@ -322,7 +328,9 @@ class IngestionService:
                     "id": section_id,
                     "document_id": document_id,
                     "parent_id": (
-                        ids.get(section.parent_index) if section.parent_index is not None else None
+                        ids.get(section.parent_index)
+                        if section.parent_index is not None
+                        else None
                     ),
                     "number": section.section_number,
                     "full_path": section.full_path,
@@ -393,10 +401,15 @@ class IngestionService:
     ) -> list[uuid.UUID]:
         """Write chunks. Returns ids positionally aligned with ``outcome.chunks``."""
         chunk_ids = [uuid.uuid4() for _ in outcome.chunks]
-        by_ordinal = {chunk.ordinal: chunk_ids[index] for index, chunk in enumerate(outcome.chunks)}
+        by_ordinal = {
+            chunk.ordinal: chunk_ids[index]
+            for index, chunk in enumerate(outcome.chunks)
+        }
 
         for index, chunk in enumerate(outcome.chunks):
-            section_id = section_ids.get(chunk.section.full_path) if chunk.section else None
+            section_id = (
+                section_ids.get(chunk.section.full_path) if chunk.section else None
+            )
             await self.session.execute(
                 text(
                     "INSERT INTO chunk (id, document_id, section_id, parent_chunk_id, "

@@ -64,7 +64,9 @@ class TestUnconfiguredKey:
         settings = settings_factory(environment=Environment.LOCAL)
         verify_admin_key(None, settings)
 
-    @pytest.mark.parametrize("environment", [Environment.DEV, Environment.STAGING])
+    @pytest.mark.parametrize(
+        "environment", [Environment.DEV, Environment.STAGING]
+    )
     def test_other_environments_refuse_access(
         self, environment: Environment, settings_factory
     ) -> None:
