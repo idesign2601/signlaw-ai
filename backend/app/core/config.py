@@ -464,6 +464,12 @@ class SecuritySettings(BaseModel):
 
     # Guards every destructive admin route (re-index, delete).
     admin_api_key: SecretStr | None = None
+    # Guards the public answering routes. Required once the API is reachable
+    # from anywhere but localhost: every question occupies the GPU for seconds,
+    # so an unauthenticated endpoint is a free compute service for whoever
+    # finds it. Several keys are allowed so the frontend, a mobile client and
+    # an integration can be revoked independently.
+    api_keys: list[SecretStr] = Field(default_factory=list)
     cors_origins: list[str] = Field(
         default_factory=lambda: ["http://localhost:5173", "http://localhost:3000"]
     )
@@ -479,6 +485,30 @@ class SecuritySettings(BaseModel):
                 "SECURITY__ADMIN_API_KEY must be at least 32 characters. "
                 "Generate one with: openssl rand -hex 32"
             )
+        return value
+
+    @field_validator("api_keys", mode="before")
+    @classmethod
+    def _split_api_keys(cls, value: object) -> object:
+        """Accept a comma-separated string as well as a JSON list.
+
+        Pydantic parses list fields from JSON, which makes a .env line awkward
+        to write and easy to get subtly wrong. A comma-separated value is what
+        anyone will actually type.
+        """
+        if isinstance(value, str) and not value.strip().startswith("["):
+            return [part.strip() for part in value.split(",") if part.strip()]
+        return value
+
+    @field_validator("api_keys")
+    @classmethod
+    def _reject_short_api_keys(cls, value: list[SecretStr]) -> list[SecretStr]:
+        for key in value:
+            if len(key.get_secret_value()) < 32:
+                raise ValueError(
+                    "Every SECURITY__API_KEYS entry must be at least 32 "
+                    "characters. Generate one with: openssl rand -hex 32"
+                )
         return value
 
 
@@ -555,6 +585,11 @@ class Settings(BaseSettings):
             problems.append(
                 "SECURITY__ADMIN_API_KEY must be set in production — admin routes "
                 "re-index and delete documents"
+            )
+        if not self.security.api_keys:
+            problems.append(
+                "SECURITY__API_KEYS must be set in production — an unauthenticated "
+                "/ask endpoint is an open GPU inference service"
             )
         if self.db.password.get_secret_value() in {"signlaw", "postgres", "change-me"}:
             problems.append("DB__PASSWORD is a default value")

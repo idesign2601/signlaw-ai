@@ -4,6 +4,9 @@ One-page Laravel Blade application. No React, Vue, Node or Vite; no build step.
 Tailwind comes from a CDN and the only JavaScript is a dependent dropdown and a
 double-submit guard.
 
+Designed to sit on ordinary PHP hosting while the AI runs on a GPU elsewhere —
+see `../docs/SPLIT_DEPLOYMENT.md`.
+
 ## What this tier does and does not do
 
 | Laravel | FastAPI |
@@ -22,6 +25,9 @@ change. The coverage list is likewise computed, not maintained: a municipality
 appears as available only when in-force documents are actually indexed for it,
 so the interface cannot advertise something the corpus cannot answer.
 
+**The API key never reaches the browser.** Calls are server-to-server, which is
+also why there is no CORS configuration and no mixed-content problem.
+
 ## Files
 
 These are the application-specific files. They overlay a stock Laravel skeleton.
@@ -30,7 +36,7 @@ These are the application-specific files. They overlay a stock Laravel skeleton.
 frontend/
 ├── app/Http/Controllers/AskController.php   the only controller
 ├── app/Services/SignLawClient.php           the only coupling to FastAPI
-├── config/signlaw.php                       API URL, timeout, cache
+├── config/signlaw.php                       API URL, key, timeout, cache
 ├── routes/web.php                           GET / and POST /
 └── resources/views/ask/index.blade.php      the whole page
 ```
@@ -47,25 +53,32 @@ rm -rf frontend && mv frontend-skeleton frontend
 cd frontend
 ```
 
-Register the client as a singleton in `bootstrap/providers.php` or
-`AppServiceProvider::register()`:
+Register the client as a singleton in `AppServiceProvider::register()`:
 
 ```php
 $this->app->singleton(\App\Services\SignLawClient::class, fn () => new \App\Services\SignLawClient(
     config('signlaw.api_url'),
     config('signlaw.timeout'),
     config('signlaw.coverage_cache_seconds'),
+    config('signlaw.api_key'),
 ));
 ```
 
 Then configure and run:
 
 ```bash
-echo 'SIGNLAW_API_URL=http://localhost:8000' >> .env
+cat >> .env <<'EOF'
+SIGNLAW_API_URL=http://localhost:8000
+SIGNLAW_API_KEY=
+EOF
 php artisan serve --port=8080
 ```
 
-With the FastAPI backend running:
+Leave `SIGNLAW_API_KEY` empty against a local backend: with
+`ENVIRONMENT=local` and no `SECURITY__API_KEYS`, the backend allows
+unauthenticated calls and logs a warning. Anything else requires the key.
+
+With the backend running:
 
 ```bash
 cd ../backend && .venv/bin/uvicorn app.main:app --port 8000
@@ -73,13 +86,18 @@ cd ../backend && .venv/bin/uvicorn app.main:app --port 8000
 
 Open <http://localhost:8080>.
 
-## Timeouts
+## Troubleshooting
 
-`SIGNLAW_API_TIMEOUT` defaults to 120 seconds, which looks excessive and is not.
-A cold Ollama model load costs 10–30 seconds, and it is paid on the first
-question after any idle period. A conventional 30-second timeout fails that
-request and reads as a broken product. `OLLAMA_KEEP_ALIVE=30m` on the backend is
-what actually keeps it rare.
+**"Coverage is unavailable because the answering service could not be reached."**
+`SIGNLAW_API_URL` is wrong, or the backend is down. The page degrades rather
+than erroring, because a broken backend should not take the site with it.
+
+**"The answering service rejected this application."**
+`SIGNLAW_API_KEY` does not match any entry in the backend's
+`SECURITY__API_KEYS`. Re-run `php artisan config:cache` if you just changed it.
+
+**Changes to `.env` appear to do nothing.**
+`config:cache` has baked the old values. Re-run it.
 
 ## What is deliberately missing
 

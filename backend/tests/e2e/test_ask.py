@@ -16,6 +16,7 @@ from fastapi import FastAPI
 from httpx import AsyncClient
 
 from app.api.deps import get_rag_service
+from app.core.config import get_settings
 from app.db.enums import ConfidenceBand
 from app.domain.confidence import ConfidenceReport
 from app.rag.retriever import RetrievalFilters
@@ -221,6 +222,53 @@ class TestAbstentions:
 
         assert response.status_code == 200
         assert response.json()["answered"] is False
+
+
+class TestApiKeyEnforcement:
+    """The guard is on the router, so it covers routes added later too."""
+
+    async def test_configured_key_is_required(
+        self, app: FastAPI, client: AsyncClient, settings_factory
+    ) -> None:
+        _install(app, _answered())
+        app.dependency_overrides[get_settings] = lambda: settings_factory(
+            security={"api_keys": ["k" * 64]}
+        )
+
+        response = await client.post(
+            "/api/v1/ask", json={"question": "Are channel letters allowed?"}
+        )
+        assert response.status_code == 401
+
+    async def test_correct_key_is_accepted(
+        self, app: FastAPI, client: AsyncClient, settings_factory
+    ) -> None:
+        _install(app, _answered())
+        app.dependency_overrides[get_settings] = lambda: settings_factory(
+            security={"api_keys": ["k" * 64]}
+        )
+
+        response = await client.post(
+            "/api/v1/ask",
+            json={"question": "Are channel letters allowed?"},
+            headers={"X-API-Key": "k" * 64},
+        )
+        assert response.status_code == 200
+
+    async def test_coverage_is_guarded_too(
+        self, app: FastAPI, client: AsyncClient, settings_factory
+    ) -> None:
+        """Cheap to serve, but it maps the corpus.
+
+        Left open, it tells an unauthenticated caller exactly which
+        municipalities are worth attacking the expensive endpoint with.
+        """
+        app.dependency_overrides[get_settings] = lambda: settings_factory(
+            security={"api_keys": ["k" * 64]}
+        )
+
+        response = await client.get("/api/v1/municipalities")
+        assert response.status_code == 401
 
 
 class TestInfrastructureFailures:

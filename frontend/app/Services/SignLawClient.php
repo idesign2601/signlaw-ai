@@ -17,8 +17,13 @@ use RuntimeException;
  * this class exists so that boundary stays visible: if logic about bylaws ever
  * appears in this file, something has been put in the wrong tier.
  *
- * There is no province logic here either. Coverage is whatever /municipalities
- * returns, so adding Alberta means ingesting PDFs, not editing PHP.
+ * There is no province logic here either. Coverage is whatever
+ * /api/v1/municipalities returns, so adding Alberta means ingesting PDFs, not
+ * editing PHP.
+ *
+ * Calls are server-to-server. The browser never contacts the backend, which is
+ * what keeps the API key out of the page and removes CORS from the picture
+ * entirely.
  */
 final class SignLawClient
 {
@@ -26,6 +31,7 @@ final class SignLawClient
         private readonly string $baseUrl,
         private readonly int $timeout,
         private readonly int $coverageCacheSeconds,
+        private readonly ?string $apiKey = null,
     ) {
     }
 
@@ -64,7 +70,8 @@ final class SignLawClient
         }
 
         try {
-            $response = Http::timeout($this->timeout)
+            $response = Http::withHeaders($this->headers())
+                ->timeout($this->timeout)
                 ->acceptJson()
                 ->post($this->baseUrl.'/api/v1/ask', $payload);
         } catch (ConnectionException $exception) {
@@ -82,6 +89,17 @@ final class SignLawClient
             throw new RuntimeException(
                 $response->json('detail')
                     ?? 'The answering service is temporarily unavailable.',
+            );
+        }
+
+        // A rejected key is a deployment fault, not something the visitor did.
+        // Logged loudly and reported vaguely, because the detail is ours.
+        if ($response->status() === 401 || $response->status() === 403) {
+            Log::error('signlaw.ask.unauthorised', ['status' => $response->status()]);
+
+            throw new RuntimeException(
+                'The answering service rejected this application. '
+                .'Check SIGNLAW_API_KEY.',
             );
         }
 
@@ -104,12 +122,28 @@ final class SignLawClient
     }
 
     /**
+     * Headers for every backend call.
+     *
+     * The API key is what stops the GPU being a free service for anyone who
+     * finds the address: a single question occupies the card for seconds.
+     *
+     * @return array<string, string>
+     */
+    private function headers(): array
+    {
+        return $this->apiKey === null || $this->apiKey === ''
+            ? []
+            : ['X-API-Key' => $this->apiKey];
+    }
+
+    /**
      * @return array<string, mixed>
      */
     private function get(string $path): array
     {
         try {
-            $response = Http::timeout($this->timeout)
+            $response = Http::withHeaders($this->headers())
+                ->timeout($this->timeout)
                 ->acceptJson()
                 ->get($this->baseUrl.$path);
         } catch (ConnectionException $exception) {

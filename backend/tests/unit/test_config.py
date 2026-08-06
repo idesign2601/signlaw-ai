@@ -205,8 +205,13 @@ class TestProductionInvariants:
             "environment": Environment.PRODUCTION,
             "debug": False,
             "db": DatabaseSettings(password="a-real-production-password"),  # type: ignore[arg-type]
+            # api_keys as well as admin_api_key: an unauthenticated /ask is an
+            # open GPU inference endpoint, so production refuses to boot
+            # without it just as it does without the admin key.
             "security": SecuritySettings(
-                admin_api_key="k" * 64, cors_origins=["https://app.example.com"]
+                admin_api_key="k" * 64,
+                api_keys=["c" * 64],
+                cors_origins=["https://app.example.com"],
             ),  # type: ignore[arg-type]
             "observability": {"log_format": LogFormat.JSON},
         }
@@ -258,6 +263,7 @@ class TestProductionInvariants:
         message = str(exc_info.value)
         assert "DEBUG must be false" in message
         assert "ADMIN_API_KEY" in message
+        assert "API_KEYS" in message
         assert "DB__PASSWORD" in message
 
     def test_non_production_is_permissive(self, settings_factory) -> None:

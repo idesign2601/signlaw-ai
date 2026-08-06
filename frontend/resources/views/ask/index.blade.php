@@ -8,9 +8,8 @@
      */
     $provinces = $coverage['provinces'] ?? [];
 
-    // The dependent dropdown needs the full catalogue client-side. Only
-    // available municipalities are selectable; the rest are listed as coming
-    // soon further down the page.
+    // The dependent dropdown needs the catalogue client-side. Only available
+    // municipalities are selectable; the rest are listed as coming soon.
     $selectable = [];
     foreach ($provinces as $province) {
         foreach ($province['municipalities'] ?? [] as $municipality) {

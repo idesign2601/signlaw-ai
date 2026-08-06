@@ -37,6 +37,9 @@ class TestProductionApp:
                 db={"password": "a-real-production-password"},
                 security={
                     "admin_api_key": "k" * 64,
+                    # Production refuses to boot without client keys too: an
+                    # unauthenticated /ask is an open GPU inference endpoint.
+                    "api_keys": ["c" * 64],
                     "cors_origins": ["https://app.example.com"],
                 },
                 observability={"log_format": LogFormat.JSON},
