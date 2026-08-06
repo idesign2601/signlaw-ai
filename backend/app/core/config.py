@@ -25,6 +25,7 @@ from pydantic import BaseModel, Field, SecretStr, field_validator, model_validat
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 __all__ = [
+    "SUPPORTED_EMBEDDING_DIMENSIONS",
     "DatabaseSettings",
     "EmbeddingProvider",
     "EmbeddingSettings",
@@ -37,7 +38,6 @@ __all__ = [
     "RedisSettings",
     "RetrievalSettings",
     "SecuritySettings",
-    "SUPPORTED_EMBEDDING_DIMENSIONS",
     "Settings",
     "VectorStoreSettings",
     "get_settings",
@@ -302,9 +302,7 @@ class VectorStoreSettings(BaseModel):
     @classmethod
     def _validate_prefix(cls, value: str) -> str:
         if not value.replace("_", "").isalnum():
-            raise ValueError(
-                "VECTOR__COLLECTION_PREFIX must be alphanumeric with underscores"
-            )
+            raise ValueError("VECTOR__COLLECTION_PREFIX must be alphanumeric with underscores")
         return value
 
     @field_validator("distance_metric")
@@ -386,8 +384,7 @@ class IngestionSettings(BaseModel):
             )
         if self.chunk_min_tokens >= self.chunk_target_tokens:
             raise ValueError(
-                "INGESTION__CHUNK_MIN_TOKENS must be smaller than "
-                "INGESTION__CHUNK_TARGET_TOKENS."
+                "INGESTION__CHUNK_MIN_TOKENS must be smaller than INGESTION__CHUNK_TARGET_TOKENS."
             )
         return self
 

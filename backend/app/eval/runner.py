@@ -35,9 +35,7 @@ class EvalRunner:
         report = SuiteReport()
 
         for index, case in enumerate(suite.cases, start=1):
-            logger.info(
-                "eval_case_started", case_id=case.id, index=index, total=len(suite)
-            )
+            logger.info("eval_case_started", case_id=case.id, index=index, total=len(suite))
             report.results.append(await self._run_case(case))
 
         logger.info(
@@ -82,9 +80,7 @@ class EvalRunner:
             quotes_verified=len(result.citations),
             answer_text=result.answer,
             abstained=self._is_abstention(result),
-            asked_clarification=(
-                result.outcome is AnswerOutcome.NEEDS_CLARIFICATION
-            ),
+            asked_clarification=(result.outcome is AnswerOutcome.NEEDS_CLARIFICATION),
             confidence=result.confidence_score,
             confidence_band=result.band.value,
             latency_ms=latency_ms,

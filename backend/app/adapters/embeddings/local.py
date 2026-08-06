@@ -276,7 +276,5 @@ class LocalEmbeddingProvider:
             return False, str(exc)
 
         if len(vector) != self._dimensions:
-            return False, (
-                f"model returned {len(vector)} dimensions, expected {self._dimensions}"
-            )
+            return False, (f"model returned {len(vector)} dimensions, expected {self._dimensions}")
         return True, f"{self._model_name} ready ({self._dimensions}d)"

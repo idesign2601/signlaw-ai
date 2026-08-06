@@ -45,7 +45,9 @@ def create_engine(settings: Settings) -> AsyncEngine:
             "server_settings": {"application_name": "signlaw-api"},
         },
     )
-    logger.info("database_engine_created", url=settings.db.safe_url, pool_size=settings.db.pool_size)
+    logger.info(
+        "database_engine_created", url=settings.db.safe_url, pool_size=settings.db.pool_size
+    )
     return engine
 
 

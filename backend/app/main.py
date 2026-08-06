@@ -74,6 +74,19 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     app.state.engine = engine
     app.state.session_factory = create_session_factory(engine)
 
+    # Built once and shared. Constructing a provider is cheap — none of them
+    # touch disk here. Each loads its weights lazily on first use behind its own
+    # lock, so startup stays fast and a process that never answers a question
+    # never pays for a 2 GB model.
+    from app.adapters.embeddings import build_embedding_provider
+    from app.adapters.llm import build_llm_provider
+    from app.adapters.reranker import build_reranker
+
+    cache_dir = str(settings.ingestion.tessdata_dir.parent / "huggingface")
+    app.state.embedder = build_embedding_provider(settings.embedding, cache_dir=cache_dir)
+    app.state.reranker = build_reranker(settings.retrieval, settings.embedding, cache_dir=cache_dir)
+    app.state.llm = build_llm_provider(settings.llm)
+
     try:
         yield
     finally:

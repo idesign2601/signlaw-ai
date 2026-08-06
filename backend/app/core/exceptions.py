@@ -320,4 +320,6 @@ class ExternalServiceError(SignLawError):
     ) -> None:
         self.service = service
         merged = {"service": service, **(details or {})}
-        super().__init__(message or f"Upstream service '{service}' failed.", details=merged, cause=cause)
+        super().__init__(
+            message or f"Upstream service '{service}' failed.", details=merged, cause=cause
+        )

@@ -27,9 +27,7 @@ class TestSingleCity:
             "What is the maximum sign area in Vancouver?",
         ],
     )
-    def test_brief_examples_route_to_single_city(
-        self, router: QueryRouter, question: str
-    ) -> None:
+    def test_brief_examples_route_to_single_city(self, router: QueryRouter, question: str) -> None:
         plan = router.route(question)
         assert plan.intent is QueryIntent.SINGLE_CITY
         assert len(plan.municipalities) == 1
@@ -58,8 +56,7 @@ class TestComparison:
 
     def test_qualified_langleys_resolve_separately(self, router: QueryRouter) -> None:
         plan = router.route(
-            "Compare sign regulations between the City of Langley and the "
-            "Township of Langley."
+            "Compare sign regulations between the City of Langley and the Township of Langley."
         )
         assert plan.intent is QueryIntent.MULTI_CITY_COMPARE
         assert set(plan.municipality_slugs) == {"langley-city", "langley-township"}
@@ -98,9 +95,7 @@ class TestOutOfScope:
             "Tell me a joke",
         ],
     )
-    def test_non_bylaw_questions_are_rejected(
-        self, router: QueryRouter, question: str
-    ) -> None:
+    def test_non_bylaw_questions_are_rejected(self, router: QueryRouter, question: str) -> None:
         plan = router.route(question)
         assert plan.intent is QueryIntent.OUT_OF_SCOPE
         assert not plan.should_retrieve
@@ -155,7 +150,5 @@ class TestPlanReporting:
     def test_reason_is_populated(self, router: QueryRouter) -> None:
         assert router.route("fascia signs in Burnaby").reason
 
-    def test_clarification_prompt_is_none_when_unambiguous(
-        self, router: QueryRouter
-    ) -> None:
+    def test_clarification_prompt_is_none_when_unambiguous(self, router: QueryRouter) -> None:
         assert router.route("fascia signs in Burnaby").clarification_prompt() is None

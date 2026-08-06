@@ -25,12 +25,8 @@ class ComponentHealth(BaseModel):
     name: str = Field(description="Component identifier, e.g. 'database'.")
     status: HealthStatus
     # Populated only when the component is not OK, to keep the payload small.
-    detail: str | None = Field(
-        default=None, description="Why the component is not healthy."
-    )
-    latency_ms: float | None = Field(
-        default=None, description="How long the probe took."
-    )
+    detail: str | None = Field(default=None, description="Why the component is not healthy.")
+    latency_ms: float | None = Field(default=None, description="How long the probe took.")
 
 
 class HealthResponse(BaseModel):

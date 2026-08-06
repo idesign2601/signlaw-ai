@@ -22,7 +22,7 @@ from sqlalchemy.ext.asyncio import AsyncEngine
 from app.core.config import Settings
 from app.core.logging import get_logger
 
-__all__ = ["ComponentStatus", "HealthReport", "HealthService", "ComponentCheck"]
+__all__ = ["ComponentCheck", "ComponentStatus", "HealthReport", "HealthService"]
 
 logger = get_logger(__name__)
 
@@ -71,9 +71,7 @@ class HealthReport:
         an accuracy optimisation and its absence does not block answering.
         """
         required = {"postgres", "pgvector", "embedding_model", "ollama"}
-        return all(
-            check.is_ok for check in self.components if check.name in required
-        )
+        return all(check.is_ok for check in self.components if check.name in required)
 
     def as_dict(self) -> dict[str, object]:
         return {
@@ -177,8 +175,7 @@ class HealthService:
                         ComponentStatus.UNAVAILABLE,
                         "the 'vector' extension is not installed",
                         remediation=(
-                            "use the pgvector/pgvector:pg16 image, then run "
-                            "`make migrate`"
+                            "use the pgvector/pgvector:pg16 image, then run `make migrate`"
                         ),
                     )
 
@@ -186,9 +183,7 @@ class HealthService:
                     text("SELECT to_regclass(:table)"), {"table": table}
                 )
         except Exception as exc:
-            return ComponentCheck(
-                "pgvector", ComponentStatus.UNAVAILABLE, str(exc)
-            )
+            return ComponentCheck("pgvector", ComponentStatus.UNAVAILABLE, str(exc))
 
         if not exists:
             return ComponentCheck(
@@ -201,9 +196,7 @@ class HealthService:
                 ),
             )
 
-        return ComponentCheck(
-            "pgvector", ComponentStatus.OK, f"extension installed, {table} ready"
-        )
+        return ComponentCheck("pgvector", ComponentStatus.OK, f"extension installed, {table} ready")
 
     async def _check_corpus(self) -> ComponentCheck:
         """Whether anything has been indexed.
@@ -223,9 +216,7 @@ class HealthService:
                         )
                     )
                 ).first()
-                documents = await connection.scalar(
-                    text("SELECT count(*) FROM document")
-                )
+                documents = await connection.scalar(text("SELECT count(*) FROM document"))
         except Exception as exc:
             return ComponentCheck("corpus", ComponentStatus.UNAVAILABLE, str(exc))
 
@@ -279,9 +270,7 @@ class HealthService:
                 latency_ms=latency,
             )
 
-        return ComponentCheck(
-            "embedding_model", ComponentStatus.OK, detail, latency_ms=latency
-        )
+        return ComponentCheck("embedding_model", ComponentStatus.OK, detail, latency_ms=latency)
 
     async def _check_ollama(self) -> ComponentCheck:
         """Whether Ollama is reachable and the configured model is pulled."""

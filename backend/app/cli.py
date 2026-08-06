@@ -145,9 +145,7 @@ async def _run_health(settings: Settings, as_json: bool) -> int:
 # -----------------------------------------------------------------------------
 
 
-async def _run_ingest(
-    settings: Settings, paths: Sequence[str], force: bool, as_json: bool
-) -> int:
+async def _run_ingest(settings: Settings, paths: Sequence[str], force: bool, as_json: bool) -> int:
     from app.adapters.embeddings import build_embedding_provider
     from app.ingestion.pipeline import discover_pdfs
     from app.services.ingestion_service import IngestionService, IngestResult
@@ -169,18 +167,14 @@ async def _run_ingest(
         print(YELLOW("No PDFs found."), file=sys.stderr)
         return 2
 
-    embedder = build_embedding_provider(
-        settings.embedding, cache_dir=_models_cache(settings)
-    )
+    embedder = build_embedding_provider(settings.embedding, cache_dir=_models_cache(settings))
 
     print(f"{BOLD('Ingesting')} {len(resolved)} document(s)")
     print(DIM(f"  embedding model: {settings.embedding.model}"))
     print()
 
     async def run(session: AsyncSession, engine: AsyncEngine) -> IngestResult:
-        service = IngestionService(
-            session=session, settings=settings, embedder=embedder
-        )
+        service = IngestionService(session=session, settings=settings, embedder=embedder)
         return await service.ingest_paths(resolved, force=force)
 
     result = await _with_session(settings, run)
@@ -191,9 +185,7 @@ async def _run_ingest(
                 {
                     "processed": result.processed,
                     "skipped": result.skipped,
-                    "failed": [
-                        {"file": name, "error": error} for name, error in result.failed
-                    ],
+                    "failed": [{"file": name, "error": error} for name, error in result.failed],
                     "chunks": result.chunks_written,
                     "collection": result.collection_name,
                 },
@@ -210,10 +202,7 @@ async def _run_ingest(
         print(f"  {RED('failed ')}  {name}: {error}")
 
     print()
-    print(
-        f"{result.chunks_written} chunks embedded into "
-        f"{CYAN(result.collection_name)}"
-    )
+    print(f"{result.chunks_written} chunks embedded into {CYAN(result.collection_name)}")
     if result.processed:
         print(DIM('Try: signlaw ask "What is the maximum fascia sign area?"'))
 
@@ -256,11 +245,7 @@ async def _run_ask(
             retriever=retriever,
             synthesizer=AnswerSynthesizer(llm=llm),
         )
-        filters = (
-            RetrievalFilters(municipality_slugs=(city,), in_force_only=True)
-            if city
-            else None
-        )
+        filters = RetrievalFilters(municipality_slugs=(city,), in_force_only=True) if city else None
         return await service.answer(question, filters=filters)
 
     result = await _with_session(settings, run)
@@ -277,9 +262,7 @@ def _answer_as_dict(result: AnswerResult) -> dict[str, object]:
     return {
         "outcome": result.outcome.value,
         "answer": result.answer,
-        "confidence": (
-            result.confidence.as_dict() if result.confidence else None
-        ),
+        "confidence": (result.confidence.as_dict() if result.confidence else None),
         "citations": [
             {
                 "municipality": c.municipality,
@@ -395,9 +378,7 @@ def _truncate(text: str, limit: int) -> str:
 # -----------------------------------------------------------------------------
 
 
-async def _run_eval(
-    settings: Settings, all_cases: bool, as_json: bool, output: str | None
-) -> int:
+async def _run_eval(settings: Settings, all_cases: bool, as_json: bool, output: str | None) -> int:
     from app.adapters.embeddings import build_embedding_provider
     from app.adapters.llm import build_llm_provider
     from app.adapters.reranker import build_reranker
@@ -435,9 +416,7 @@ async def _run_eval(
             vector_settings=settings.vector,
             reranker=reranker,
         )
-        service = RagService(
-            retriever=retriever, synthesizer=AnswerSynthesizer(llm=llm)
-        )
+        service = RagService(retriever=retriever, synthesizer=AnswerSynthesizer(llm=llm))
         return await EvalRunner(service=service).run(suite)
 
     report = await _with_session(settings, run)
@@ -595,17 +574,13 @@ def build_parser() -> argparse.ArgumentParser:
 
     ingest = subparsers.add_parser("ingest", help="index one or more PDFs")
     ingest.add_argument("paths", nargs="+", help="PDF files or directories")
-    ingest.add_argument(
-        "--force", action="store_true", help="re-index documents already indexed"
-    )
+    ingest.add_argument("--force", action="store_true", help="re-index documents already indexed")
     ingest.set_defaults(handler="ingest")
 
     ask = subparsers.add_parser("ask", help="ask a question about indexed bylaws")
     ask.add_argument("question", help="the question, in quotes")
     ask.add_argument("--city", help="restrict to a municipality slug, e.g. burnaby")
-    ask.add_argument(
-        "--trace", action="store_true", help="show retrieval scores and timings"
-    )
+    ask.add_argument("--trace", action="store_true", help="show retrieval scores and timings")
     ask.set_defaults(handler="ask")
 
     evaluate = subparsers.add_parser("eval", help="run the golden evaluation suite")
@@ -643,15 +618,9 @@ def main(argv: Sequence[str] | None = None) -> int:
     handlers = {
         "health": lambda: _run_health(settings, args.json),
         "ingest": lambda: _run_ingest(settings, args.paths, args.force, args.json),
-        "ask": lambda: _run_ask(
-            settings, args.question, args.city, args.trace, args.json
-        ),
-        "eval": lambda: _run_eval(
-            settings, args.all_cases, args.json, args.output
-        ),
-        "validate": lambda: _run_validate(
-            settings, args.output, args.worksheet, args.json
-        ),
+        "ask": lambda: _run_ask(settings, args.question, args.city, args.trace, args.json),
+        "eval": lambda: _run_eval(settings, args.all_cases, args.json, args.output),
+        "validate": lambda: _run_validate(settings, args.output, args.worksheet, args.json),
     }
 
     try:

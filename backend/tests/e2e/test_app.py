@@ -59,9 +59,7 @@ class TestProductionApp:
 
 class TestCors:
     async def test_allowed_origin_is_reflected(self, client: AsyncClient) -> None:
-        response = await client.get(
-            "/healthz", headers={"Origin": "http://localhost:5173"}
-        )
+        response = await client.get("/healthz", headers={"Origin": "http://localhost:5173"})
         assert response.headers["access-control-allow-origin"] == "http://localhost:5173"
 
     async def test_disallowed_origin_is_not_reflected(self, client: AsyncClient) -> None:
@@ -78,8 +76,6 @@ class TestCors:
         )
         assert response.status_code == 200
 
-    async def test_correlation_headers_are_exposed_to_browsers(
-        self, client: AsyncClient
-    ) -> None:
+    async def test_correlation_headers_are_exposed_to_browsers(self, client: AsyncClient) -> None:
         response = await client.get("/healthz", headers={"Origin": "http://localhost:5173"})
         assert "X-Request-ID" in response.headers["access-control-expose-headers"]
