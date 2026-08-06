@@ -1,0 +1,102 @@
+# GPU overlay — CUDA hosts (Vast.ai, or any box with nvidia-container-toolkit).
+#
+#   docker compose -f docker-compose.yml -f docker-compose.gpu.yml up -d
+#
+# Adds:
+#   * Ollama as a container with GPU access, instead of reaching a host install
+#   * GPU reservations for the API and worker, so local embedding and reranking
+#     run on the card rather than the CPU
+#   * a named volume for Ollama's model store, which is ~9 GB for a 14B model
+#     and must not be re-pulled on every restart
+#
+# The base compose file is unchanged and still works CPU-only, so development
+# and CI keep running without a GPU.
+
+x-gpu-reservation: &gpu-reservation
+  resources:
+    reservations:
+      devices:
+        - driver: nvidia
+          count: 1
+          capabilities: [gpu]
+
+services:
+  # ---------------------------------------------------------------------------
+  # Generation. Owns the GPU; everything else shares what is left.
+  # ---------------------------------------------------------------------------
+  ollama:
+    image: ollama/ollama:latest
+    restart: unless-stopped
+    environment:
+      # Keep the model resident. Loading a 14B model costs 10-30s, which would
+      # otherwise be paid on the first question after any idle period.
+      OLLAMA_KEEP_ALIVE: ${OLLAMA_KEEP_ALIVE:-30m}
+      # One at a time: a 24 GB card holds one 14B model comfortably, and
+      # concurrent loads cause thrashing rather than throughput.
+      OLLAMA_MAX_LOADED_MODELS: "1"
+      OLLAMA_NUM_PARALLEL: ${OLLAMA_NUM_PARALLEL:-1}
+    volumes:
+      - ollama_models:/root/.ollama
+    ports:
+      - "${OLLAMA_PUBLISHED_PORT:-11434}:11434"
+    deploy: *gpu-reservation
+    healthcheck:
+      test: ["CMD-SHELL", "ollama list >/dev/null 2>&1 || exit 1"]
+      interval: 15s
+      timeout: 10s
+      retries: 10
+      start_period: 60s
+
+  # Pulls the configured model once, then exits. Runs before the API so the
+  # first question does not race a 9 GB download.
+  ollama-pull:
+    image: ollama/ollama:latest
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        set -e
+        echo "Pulling ${LLM__MODEL:-qwen2.5:14b-instruct}..."
+        OLLAMA_HOST=http://ollama:11434 ollama pull "${LLM__MODEL:-qwen2.5:14b-instruct}"
+        echo "Model ready."
+    depends_on:
+      ollama:
+        condition: service_healthy
+    restart: "no"
+
+  # ---------------------------------------------------------------------------
+  # API — embeds the query and calls the LLM, so it wants the GPU too.
+  # ---------------------------------------------------------------------------
+  api:
+    build:
+      args:
+        TORCH_VARIANT: cuda
+    environment:
+      LLM__OLLAMA_BASE_URL: http://ollama:11434
+      EMBEDDING__DEVICE: cuda
+    deploy: *gpu-reservation
+    depends_on:
+      ollama:
+        condition: service_healthy
+      ollama-pull:
+        condition: service_completed_successfully
+
+  # ---------------------------------------------------------------------------
+  # Worker — embedding throughput during ingestion is the GPU's main job here.
+  # ---------------------------------------------------------------------------
+  worker:
+    build:
+      args:
+        TORCH_VARIANT: cuda
+    environment:
+      LLM__OLLAMA_BASE_URL: http://ollama:11434
+      EMBEDDING__DEVICE: cuda
+    deploy: *gpu-reservation
+
+  # ---------------------------------------------------------------------------
+  # Postgres stays CPU-only and untouched. It is the one service whose data
+  # loss is unrecoverable, so it is deliberately not entangled with the GPU
+  # lifecycle — see docs/DEPLOYMENT.md on running it off-instance.
+  # ---------------------------------------------------------------------------
+
+volumes:
+  ollama_models:

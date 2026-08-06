@@ -1,0 +1,191 @@
+[build-system]
+requires = ["setuptools>=69", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "signlaw-ai"
+version = "0.1.0"
+description = "Citation-first retrieval over BC municipal sign bylaws"
+requires-python = ">=3.12"
+license = { text = "Proprietary" }
+
+# No `readme` field. It pointed at ../README.md, which setuptools refuses to
+# read outside the package root — and which the Dockerfile never copies into the
+# build context either. The field only supplies a long description to a package
+# index, and this package is proprietary and never published, so it is dropped
+# rather than worked around. The documentation lives at the repository root
+# where it belongs; see ../README.md and ../docs/.
+
+dependencies = [
+    # Web
+    "fastapi>=0.115,<0.117",
+    "uvicorn[standard]>=0.32,<0.35",
+    "python-multipart>=0.0.12",
+    "sse-starlette>=2.1",
+    # Config & validation
+    "pydantic>=2.9,<3",
+    "pydantic-settings>=2.6,<3",
+    # Database
+    "sqlalchemy[asyncio]>=2.0.36,<2.1",
+    "asyncpg>=0.30",
+    "greenlet>=3.1",
+    "alembic>=1.14",
+    # Vectors live in Postgres beside the relational data they describe.
+    "pgvector>=0.3.6",
+    # Queue
+    "arq>=0.26",
+    "redis>=5.2",
+    # Logging
+    "structlog>=24.4",
+    # RAG core. Sparse retrieval is Postgres full-text search, so there is no
+    # in-process BM25 library to keep in sync with the corpus.
+    "llama-index-core>=0.12,<0.13",
+    "tiktoken>=0.8",
+    # PDF
+    "pymupdf>=1.24",
+    "ocrmypdf>=16.5",
+    # HTTP
+    "httpx>=0.27",
+    "tenacity>=9.0",
+]
+
+[project.optional-dependencies]
+# Local-first inference: Ollama for generation, sentence-transformers for
+# embeddings and reranking. This is the default deployment mode.
+local = [
+    "ollama>=0.4",
+    "sentence-transformers>=3.3",
+    "torch>=2.5",
+]
+
+# Opt-in hosted providers.
+cloud = [
+    "openai>=1.57",
+    "anthropic>=0.40",
+]
+
+dev = [
+    "pytest>=8.3",
+    "pytest-asyncio>=0.24",
+    "pytest-cov>=6.0",
+    "anyio>=4.6",
+    "asgi-lifespan>=2.1",
+    "mypy>=1.13",
+    "ruff>=0.8",
+    "types-redis>=4.6",
+    "testcontainers[postgres]>=4.8",
+    "faker>=33.0",
+]
+
+[project.scripts]
+signlaw = "app.cli:main"
+
+[tool.setuptools.packages.find]
+include = ["app*"]
+
+# -----------------------------------------------------------------------------
+# Ruff
+# -----------------------------------------------------------------------------
+[tool.ruff]
+target-version = "py312"
+line-length = 100
+src = ["app", "tests"]
+
+[tool.ruff.lint]
+select = [
+    "E", "W",    # pycodestyle
+    "F",         # pyflakes
+    "I",         # isort
+    "N",         # pep8-naming
+    "UP",        # pyupgrade
+    "B",         # bugbear
+    "C4",        # comprehensions
+    "DTZ",       # naive datetimes — important for bylaw currency logic
+    "T20",       # no print()
+    "SIM",       # simplify
+    "PTH",       # use pathlib
+    "RUF",       # ruff-specific
+    "ASYNC",     # async correctness
+    "S",         # bandit security
+    "ANN",       # require annotations
+]
+ignore = [
+    "ANN401",    # allow Any in narrow, documented places
+    "B008",      # FastAPI Depends() in defaults is idiomatic
+    "S101",      # assert is fine (tests, and internal invariants)
+    # This project uses asyncio, not trio/anyio. ASYNC240 flags pathlib calls
+    # inside async functions; the ones here are single small reads and writes in
+    # CLI paths, not hot-path I/O.
+    "ASYNC240",
+    # Bylaw numbers and municipal titles genuinely contain en dashes and
+    # typographic apostrophes. The regexes must match the real characters.
+    "RUF001",
+]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**" = ["ANN", "S105", "S106", "S311"]
+"alembic/**" = ["ANN", "E501", "N999"]
+# A command line tool prints. That is its entire purpose.
+"app/cli.py" = ["T201"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["app"]
+
+[tool.ruff.format]
+docstring-code-format = true
+
+# -----------------------------------------------------------------------------
+# mypy
+# -----------------------------------------------------------------------------
+[tool.mypy]
+python_version = "3.12"
+strict = true
+warn_unreachable = true
+warn_no_return = true
+show_error_codes = true
+pretty = true
+plugins = ["pydantic.mypy"]
+exclude = ["alembic/versions/"]
+
+[[tool.mypy.overrides]]
+module = [
+    "pgvector.*",
+    "ocrmypdf.*",
+    "fitz.*",
+    "rank_bm25.*",
+    "sentence_transformers.*",
+    "ollama.*",
+    "arq.*",
+    "llama_index.*",
+]
+ignore_missing_imports = true
+
+# -----------------------------------------------------------------------------
+# pytest
+# -----------------------------------------------------------------------------
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+# Makes `backend/` importable so tests can `from tests.conftest import ...`.
+pythonpath = ["."]
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function"
+addopts = "-ra --strict-markers --strict-config"
+markers = [
+    "integration: requires a live Postgres with pgvector, migrated to head",
+    "slow: takes more than a couple of seconds",
+    "eval: golden-set regression, requires a built index",
+]
+filterwarnings = ["error"]
+
+[tool.coverage.run]
+source = ["app"]
+branch = true
+omit = ["app/main.py", "*/__init__.py"]
+
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    "if TYPE_CHECKING:",
+    "raise NotImplementedError",
+    "@overload",
+]
