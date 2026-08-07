@@ -44,7 +44,9 @@ def section(
 
 def table(page: int = 1, rows: int = 4, columns: int = 3) -> ExtractedTable:
     header = tuple(f"col{c}" for c in range(columns))
-    data = tuple(tuple(f"r{r}c{c}" for c in range(columns)) for r in range(1, rows))
+    data = tuple(
+        tuple(f"r{r}c{c}" for c in range(columns)) for r in range(1, rows)
+    )
     markdown = "\n".join(" | ".join(row) for row in (header, *data))
     return ExtractedTable(page_number=page, rows=(header, *data), markdown=markdown)
 
@@ -98,7 +100,9 @@ class TestCitationPreservation:
         assert chunks[0].is_citable
 
     def test_page_range_is_preserved(self) -> None:
-        chunks = chunk_document([section(0, "5.3", "Fascia", "body", page_start=22, page_end=24)])
+        chunks = chunk_document(
+            [section(0, "5.3", "Fascia", "body", page_start=22, page_end=24)]
+        )
         assert chunks[0].page_start == 22
         assert chunks[0].page_end == 24
 
@@ -163,7 +167,9 @@ class TestOverlap:
     def test_overlap_repeats_trailing_context(self) -> None:
         config = ChunkingConfig(target_tokens=40, max_tokens=70, overlap_tokens=25)
         paragraphs = [f"Paragraph {n} with distinctive marker{n}." for n in range(12)]
-        chunks = SectionChunker(config).chunk([section(0, "5.3", "S", "\n\n".join(paragraphs))])
+        chunks = SectionChunker(config).chunk(
+            [section(0, "5.3", "S", "\n\n".join(paragraphs))]
+        )
         children = [c for c in chunks if c.parent_ordinal is not None]
         if len(children) >= 2:
             # Some text from the first chunk must reappear in the second so a
@@ -311,7 +317,9 @@ class TestTokenCounting:
         assert estimate_tokens("") == 0
 
     def test_a_custom_counter_is_used(self) -> None:
-        chunks = chunk_document([section(0, "5.3", "S", "body")], count_tokens=lambda text: 999)
+        chunks = chunk_document(
+            [section(0, "5.3", "S", "body")], count_tokens=lambda text: 999
+        )
         assert chunks[0].token_count == 999
 
 

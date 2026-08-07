@@ -21,15 +21,13 @@ from pgvector.sqlalchemy import Vector
 from sqlalchemy import (
     CheckConstraint,
     DateTime,
+    Enum as SAEnum,
     ForeignKey,
     Index,
     Integer,
     String,
     UniqueConstraint,
     text,
-)
-from sqlalchemy import (
-    Enum as SAEnum,
 )
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -77,8 +75,12 @@ class EmbeddingCollection(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     embedding_model_revision: Mapped[str | None] = mapped_column(String(80))
     dimensions: Mapped[int] = mapped_column(Integer, nullable=False)
 
-    chunking_version: Mapped[int] = mapped_column(Integer, nullable=False, server_default=text("1"))
-    index_version: Mapped[int] = mapped_column(Integer, nullable=False, server_default=text("1"))
+    chunking_version: Mapped[int] = mapped_column(
+        Integer, nullable=False, server_default=text("1")
+    )
+    index_version: Mapped[int] = mapped_column(
+        Integer, nullable=False, server_default=text("1")
+    )
     distance_metric: Mapped[str] = mapped_column(
         String(16), nullable=False, server_default=text("'cosine'")
     )
@@ -95,7 +97,9 @@ class EmbeddingCollection(UUIDPrimaryKeyMixin, TimestampMixin, Base):
         index=True,
     )
 
-    chunk_count: Mapped[int] = mapped_column(Integer, nullable=False, server_default=text("0"))
+    chunk_count: Mapped[int] = mapped_column(
+        Integer, nullable=False, server_default=text("0")
+    )
     activated_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     retired_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     notes: Mapped[str | None] = mapped_column(String(500))
@@ -169,7 +173,8 @@ def _make_embedding_model(dimensions: int) -> type[Any]:
 
 
 CHUNK_EMBEDDING_TABLES: dict[int, type[Any]] = {
-    dimensions: _make_embedding_model(dimensions) for dimensions in SUPPORTED_EMBEDDING_DIMENSIONS
+    dimensions: _make_embedding_model(dimensions)
+    for dimensions in SUPPORTED_EMBEDDING_DIMENSIONS
 }
 
 

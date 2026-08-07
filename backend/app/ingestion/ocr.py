@@ -66,7 +66,9 @@ def probe_ocr_capability(tessdata_dir: Path | None = None) -> OcrCapability:
 
     languages: tuple[str, ...] = ()
     if tessdata_dir and tessdata_dir.is_dir():
-        languages = tuple(sorted(path.stem for path in tessdata_dir.glob("*.traineddata")))
+        languages = tuple(
+            sorted(path.stem for path in tessdata_dir.glob("*.traineddata"))
+        )
 
     if not languages and tesseract:
         # Fall back to Tesseract's own view when TESSDATA_PREFIX is set
@@ -80,7 +82,11 @@ def probe_ocr_capability(tessdata_dir: Path | None = None) -> OcrCapability:
                 check=False,
             )
             languages = tuple(
-                sorted(line.strip() for line in completed.stdout.splitlines()[1:] if line.strip())
+                sorted(
+                    line.strip()
+                    for line in completed.stdout.splitlines()[1:]
+                    if line.strip()
+                )
             )
         except (OSError, subprocess.SubprocessError):
             languages = ()
@@ -156,9 +162,8 @@ class OcrEngine:
         name = filename or path.name
 
         if not page_numbers:
-            return OcrResult(
-                pages={}, ocred_page_numbers=(), skipped=True, skip_reason="no pages required OCR"
-            )
+            return OcrResult(pages={}, ocred_page_numbers=(), skipped=True,
+                             skip_reason="no pages required OCR")
 
         capability = probe_ocr_capability(self.tessdata_dir)
         if not capability.is_usable or not capability.supports(self.languages):
@@ -190,21 +195,17 @@ class OcrEngine:
     ) -> None:
         command = [
             "ocrmypdf",
-            "--language",
-            self.languages,
-            "--image-dpi",
-            str(self.dpi),
+            "--language", self.languages,
+            "--image-dpi", str(self.dpi),
             # Only rasterise and OCR pages without a usable text layer; pages
             # that already have one are passed through untouched.
             "--skip-text",
-            "--pages",
-            ",".join(str(number) for number in page_numbers),
+            "--pages", ",".join(str(number) for number in page_numbers),
             # Deskew and clean improve recognition on photocopied bylaws, which
             # are common in older municipal archives.
             "--deskew",
             "--clean",
-            "--optimize",
-            "1",
+            "--optimize", "1",
             "--quiet",
             str(source),
             str(target),
@@ -244,7 +245,8 @@ class OcrEngine:
         # is a benign outcome rather than a failure.
         if completed.returncode not in (0, 2) or not target.exists():
             raise OCRError(
-                f"ocrmypdf exited with {completed.returncode}: {completed.stderr.strip()[:400]}",
+                f"ocrmypdf exited with {completed.returncode}: "
+                f"{completed.stderr.strip()[:400]}",
                 filename=filename,
                 stage="ocr",
                 details={"returncode": completed.returncode},

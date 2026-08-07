@@ -146,7 +146,8 @@ class TestVectorStoreSettings:
         # Must match the operator class the HNSW index was built with, or the
         # index is silently not used.
         assert (
-            VectorStoreSettings(distance_metric="cosine").pgvector_ops_class == "vector_cosine_ops"
+            VectorStoreSettings(distance_metric="cosine").pgvector_ops_class
+            == "vector_cosine_ops"
         )
 
     def test_invalid_prefix_is_rejected(self) -> None:
@@ -208,11 +209,7 @@ class TestProductionInvariants:
             # api_keys as well as admin_api_key: an unauthenticated /ask is an
             # open GPU inference endpoint, so production refuses to boot
             # without it just as it does without the admin key.
-            "security": SecuritySettings(
-                admin_api_key="k" * 64,
-                api_keys=["c" * 64],
-                cors_origins=["https://app.example.com"],
-            ),  # type: ignore[arg-type]
+            "security": SecuritySettings(admin_api_key="k" * 64, api_keys=["c" * 64], cors_origins=["https://app.example.com"]),  # type: ignore[arg-type]
             "observability": {"log_format": LogFormat.JSON},
         }
         base.update(overrides)

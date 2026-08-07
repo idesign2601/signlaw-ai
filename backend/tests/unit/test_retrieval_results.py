@@ -92,7 +92,9 @@ class TestCitability:
 
 class TestCitationLabel:
     def test_rendered_form(self) -> None:
-        assert chunk().citation_label == ("Coquitlam — Sign Bylaw No. 4451, 2019, s. 5.3(b), p. 22")
+        assert chunk().citation_label == (
+            "Coquitlam — Sign Bylaw No. 4451, 2019, s. 5.3(b), p. 22"
+        )
 
     def test_falls_back_to_the_page_without_a_section(self) -> None:
         label = chunk(section_number=None).citation_label

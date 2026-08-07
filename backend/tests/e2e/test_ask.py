@@ -199,7 +199,9 @@ class TestAbstentions:
             ),
         )
 
-        payload = (await client.post("/api/v1/ask", json={"question": "Fascia sign area?"})).json()
+        payload = (
+            await client.post("/api/v1/ask", json={"question": "Fascia sign area?"})
+        ).json()
 
         assert payload["outcome"] == "only_outdated"
         assert payload["outdated_documents"] == ["Sign Bylaw 1972 (repealed)"]

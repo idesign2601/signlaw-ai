@@ -63,7 +63,9 @@ class TestRefusesToHalfWork:
         column name and match whatever the layer returned first.
         """
         assert (
-            build_provider("arcgis", endpoint="https://gis.example.ca/0", config={"fields": {}})
+            build_provider(
+                "arcgis", endpoint="https://gis.example.ca/0", config={"fields": {}}
+            )
             is None
         )
 

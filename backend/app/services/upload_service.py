@@ -130,7 +130,9 @@ async def process_upload(
         try:
             await _mark(session, job_id, JobStatus.RUNNING, started=True)
 
-            service = IngestionService(session=session, settings=settings, embedder=embedder)
+            service = IngestionService(
+                session=session, settings=settings, embedder=embedder
+            )
             # force=True: an operator re-uploading a file is asking for it to be
             # re-indexed, even when the bytes are identical.
             result = await service.ingest_paths([path], force=True)
@@ -151,7 +153,7 @@ async def process_upload(
                 chunks=result.chunks_written,
                 skipped=len(result.skipped),
             )
-        except Exception as exc:
+        except Exception as exc:  # noqa: BLE001 — nothing upstream can catch this
             logger.exception("upload_processing_failed", filename=path.name)
             await session.rollback()
             await _fail(session, job_id, str(exc))
@@ -201,7 +203,8 @@ async def _mark(
         "UPDATE ingestion_job SET status = CAST(:status AS job_status), "
         " started_at = :now WHERE id = :id"
         if started
-        else "UPDATE ingestion_job SET status = CAST(:status AS job_status) WHERE id = :id"
+        else "UPDATE ingestion_job SET status = CAST(:status AS job_status) "
+        "WHERE id = :id"
     )
 
     await session.execute(
@@ -245,7 +248,7 @@ async def _fail(session: AsyncSession, job_id: uuid.UUID, reason: str) -> None:
             },
         )
         await session.commit()
-    except Exception:
+    except Exception:  # noqa: BLE001 — the log is the last resort
         logger.exception("upload_failure_not_recorded", job_id=str(job_id))
 
 

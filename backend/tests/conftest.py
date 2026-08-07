@@ -113,7 +113,9 @@ def stub_engine() -> StubEngine:
 
 
 @pytest.fixture
-def app(monkeypatch: pytest.MonkeyPatch, stub_engine: StubEngine) -> Generator[FastAPI, None, None]:
+def app(
+    monkeypatch: pytest.MonkeyPatch, stub_engine: StubEngine
+) -> Generator[FastAPI, None, None]:
     """A fully wired application with the database replaced by a stub."""
     import app.db.session as session_module
     import app.main as main_module

@@ -30,7 +30,9 @@ __all__ = ["AddressOutcome", "AddressParser", "ParsedAddress"]
 # look up — "Main Street, Burnaby" is a street, not an address.
 _CIVIC_NUMBER = re.compile(r"^\s*(\d+[a-z]?(?:\s*-\s*\d+[a-z]?)?)\s+", re.IGNORECASE)
 
-_POSTAL_CODE = re.compile(r"\b[a-z]\d[a-z]\s*\d[a-z]\d\b", re.IGNORECASE)
+_POSTAL_CODE = re.compile(
+    r"\b[a-z]\d[a-z]\s*\d[a-z]\d\b", re.IGNORECASE
+)
 
 _PROVINCE_TOKENS = re.compile(
     r",?\s*\b(?:bc|b\.c\.|british columbia|ab|alta|alberta|canada)\b\.?\s*$",
@@ -115,7 +117,9 @@ class AddressParser:
             ),
         )
 
-    def _resolved(self, raw: str, cleaned: str, record: MunicipalityRecord) -> ParsedAddress:
+    def _resolved(
+        self, raw: str, cleaned: str, record: MunicipalityRecord
+    ) -> ParsedAddress:
         street = self._strip_municipality(cleaned, record)
 
         if not _CIVIC_NUMBER.match(street):
@@ -128,7 +132,8 @@ class AddressParser:
                 municipality=record,
                 province_code=_province_of(record),
                 detail=(
-                    "That looks like a street rather than an address. Include the building number."
+                    "That looks like a street rather than an address. Include "
+                    "the building number."
                 ),
             )
 
@@ -149,7 +154,9 @@ class AddressParser:
         """
         candidates = [record.official_name, record.name, *record.aliases]
         for candidate in sorted(candidates, key=len, reverse=True):
-            pattern = re.compile(rf",?\s*{re.escape(candidate)}\s*,?\s*$", re.IGNORECASE)
+            pattern = re.compile(
+                rf",?\s*{re.escape(candidate)}\s*,?\s*$", re.IGNORECASE
+            )
             stripped = pattern.sub("", value).strip().strip(",")
             if stripped != value:
                 return stripped.strip()
@@ -165,11 +172,16 @@ class AddressParser:
                 continue
             phrase = " ".join(tokens[-size:])
             if self.registry.is_ambiguous(phrase):
-                return tuple(record.official_name for record in self.registry.candidates(phrase))
+                return tuple(
+                    record.official_name
+                    for record in self.registry.candidates(phrase)
+                )
         return ()
 
 
-def _trailing(value: str, records: Sequence[MunicipalityRecord]) -> MunicipalityRecord:
+def _trailing(
+    value: str, records: Sequence[MunicipalityRecord]
+) -> MunicipalityRecord:
     """The municipality named last in the string.
 
     ``find_in_text`` returns matches ordered by *name length*, longest first, so

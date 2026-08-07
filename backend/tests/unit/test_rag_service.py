@@ -105,21 +105,17 @@ class FakeLLM:
     """Returns a canned JSON answer, or raises."""
 
     def __init__(self, payload: dict | None = None, raises: Exception | None = None) -> None:
-        self.payload = (
-            payload
-            if payload is not None
-            else {
-                "answer": "A fascia sign must not exceed 20% of the building face [S1].",
-                "citations": [
-                    {
-                        "source_id": 1,
-                        "quote": "must not exceed twenty percent (20%)",
-                        "supports": "the 20% limit",
-                    }
-                ],
-                "answered": True,
-            }
-        )
+        self.payload = payload if payload is not None else {
+            "answer": "A fascia sign must not exceed 20% of the building face [S1].",
+            "citations": [
+                {
+                    "source_id": 1,
+                    "quote": "must not exceed twenty percent (20%)",
+                    "supports": "the 20% limit",
+                }
+            ],
+            "answered": True,
+        }
         self.raises = raises
         self.prompts: list[str] = []
 
@@ -285,25 +281,33 @@ class TestOnlyOutdated:
     async def test_detects_superseded_only_results(self) -> None:
         # In-force search finds nothing; the unfiltered probe finds superseded
         # text. These mean opposite things and must be reported differently.
-        retriever = FakeRetriever([], unfiltered=[chunk(status=DocumentStatus.SUPERSEDED)])
+        retriever = FakeRetriever(
+            [], unfiltered=[chunk(status=DocumentStatus.SUPERSEDED)]
+        )
         result = await build(retriever).answer("Fascia sign rules in Burnaby?")
 
         assert result.outcome is AnswerOutcome.ONLY_OUTDATED
         assert result.outdated_documents
 
     async def test_names_the_outdated_documents(self) -> None:
-        retriever = FakeRetriever([], unfiltered=[chunk(status=DocumentStatus.REPEALED)])
+        retriever = FakeRetriever(
+            [], unfiltered=[chunk(status=DocumentStatus.REPEALED)]
+        )
         result = await build(retriever).answer("Fascia sign rules in Burnaby?")
         assert "Sign Bylaw No. 13743" in result.outdated_documents[0]
 
     async def test_does_not_answer_from_outdated_text(self) -> None:
         llm = FakeLLM()
-        retriever = FakeRetriever([], unfiltered=[chunk(status=DocumentStatus.SUPERSEDED)])
+        retriever = FakeRetriever(
+            [], unfiltered=[chunk(status=DocumentStatus.SUPERSEDED)]
+        )
         await build(retriever, llm).answer("Fascia sign rules in Burnaby?")
         assert llm.prompts == []
 
     async def test_probe_can_be_disabled(self) -> None:
-        retriever = FakeRetriever([], unfiltered=[chunk(status=DocumentStatus.SUPERSEDED)])
+        retriever = FakeRetriever(
+            [], unfiltered=[chunk(status=DocumentStatus.SUPERSEDED)]
+        )
         service = build(retriever, detect_outdated=False)
         result = await service.answer("Fascia sign rules in Burnaby?")
         assert result.outcome is AnswerOutcome.NO_RELEVANT_BYLAW
@@ -323,7 +327,9 @@ class TestUnclearMunicipality:
 
         assert len(result.clarification_options) == 2
         assert any("City of Langley" in option for option in result.clarification_options)
-        assert any("Township of Langley" in option for option in result.clarification_options)
+        assert any(
+            "Township of Langley" in option for option in result.clarification_options
+        )
 
     async def test_nothing_is_retrieved_or_generated(self) -> None:
         retriever = FakeRetriever([chunk()])
@@ -433,7 +439,9 @@ class TestGenerationUnavailable:
         assert result.citations[0].section == "5.3"
 
     async def test_it_is_reported_as_infrastructure(self) -> None:
-        service = build(FakeRetriever([chunk()]), FakeLLM(raises=LLMError("down")))
+        service = build(
+            FakeRetriever([chunk()]), FakeLLM(raises=LLMError("down"))
+        )
         result = await service.answer("Fascia sign area in Burnaby?")
         assert result.outcome.is_infrastructure_failure
 
@@ -478,7 +486,9 @@ class TestVerificationFailure:
                 "answered": True,
             }
         )
-        result = await build(FakeRetriever([chunk()]), llm).answer("Fascia sign height in Burnaby?")
+        result = await build(FakeRetriever([chunk()]), llm).answer(
+            "Fascia sign height in Burnaby?"
+        )
 
         assert result.outcome is AnswerOutcome.UNVERIFIED
         assert not result.citations
@@ -487,7 +497,9 @@ class TestVerificationFailure:
         llm = FakeLLM(
             {
                 "answer": "Projecting signs are prohibited [S9].",
-                "citations": [{"source_id": 9, "quote": "prohibited", "supports": "ban"}],
+                "citations": [
+                    {"source_id": 9, "quote": "prohibited", "supports": "ban"}
+                ],
                 "answered": True,
             }
         )
@@ -500,5 +512,7 @@ class TestVerificationFailure:
         llm = FakeLLM(
             {"answer": "The excerpts do not cover this.", "citations": [], "answered": False}
         )
-        result = await build(FakeRetriever([chunk()]), llm).answer("Holographic signs in Burnaby?")
+        result = await build(FakeRetriever([chunk()]), llm).answer(
+            "Holographic signs in Burnaby?"
+        )
         assert result.outcome is AnswerOutcome.UNVERIFIED

@@ -56,7 +56,9 @@ _UNITS: dict[str, str] = {
     "%": "%",
 }
 
-_UNIT_ALTERNATION = "|".join(re.escape(unit) for unit in sorted(_UNITS, key=len, reverse=True))
+_UNIT_ALTERNATION = "|".join(
+    re.escape(unit) for unit in sorted(_UNITS, key=len, reverse=True)
+)
 
 # "shall not exceed 9.3 square metres", "maximum of 7.5 m"
 _LIMIT = re.compile(
@@ -89,7 +91,9 @@ _DEFERRAL = re.compile(
 )
 
 # "between 2.4 and 4.5 metres" — a range has no single maximum.
-_RANGE = re.compile(r"\bbetween\s+\d+(?:[.,]\d+)?\s*(?:\w+)?\s+and\s+\d+", re.IGNORECASE)
+_RANGE = re.compile(
+    r"\bbetween\s+\d+(?:[.,]\d+)?\s*(?:\w+)?\s+and\s+\d+", re.IGNORECASE
+)
 
 _SENTENCE = re.compile(r"(?<=[.;])\s+")
 
@@ -156,7 +160,9 @@ def _build(match: re.Match[str], sentence: str, *, is_ratio: bool) -> NumericLim
     )
 
 
-def _acceptable(limit: NumericLimit | None, expected_units: tuple[str, ...]) -> bool:
+def _acceptable(
+    limit: NumericLimit | None, expected_units: tuple[str, ...]
+) -> bool:
     """Reject a limit in the wrong unit.
 
     A height rule that parses "9.3 square metres" has matched the area sentence

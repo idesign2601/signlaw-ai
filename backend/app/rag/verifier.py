@@ -32,7 +32,7 @@ from dataclasses import dataclass, field
 from app.core.logging import get_logger
 from app.rag.results import RetrievedChunk
 
-__all__ = ["CitationClaim", "CitationVerifier", "VerificationReport"]
+__all__ = ["CitationClaim", "VerificationReport", "CitationVerifier"]
 
 logger = get_logger(__name__)
 
@@ -40,10 +40,8 @@ _WHITESPACE = re.compile(r"\s+")
 
 # Numbers that carry regulatory meaning. Bare years and bylaw numbers are
 # excluded by _is_regulatory_number below.
-_NUMBER = re.compile(
-    r"\b\d+(?:[.,]\d+)?\s*(?:%|percent|m|mm|cm|metres?|meters?|"
-    r"ft|feet|foot|in|inches|sq\.?\s*m|square\s+met(?:re|er)s?)?"
-)
+_NUMBER = re.compile(r"\b\d+(?:[.,]\d+)?\s*(?:%|percent|m|mm|cm|metres?|meters?|"
+                     r"ft|feet|foot|in|inches|sq\.?\s*m|square\s+met(?:re|er)s?)?")
 
 # Sentences asserting a rule. These are what must be cited; descriptive or
 # hedging sentences need not be.
@@ -123,11 +121,19 @@ class VerificationReport:
 
     @property
     def is_clean(self) -> bool:
-        return not self.invalid_claims and not self.uncited_claims and not self.ungrounded_numbers
+        return (
+            not self.invalid_claims
+            and not self.uncited_claims
+            and not self.ungrounded_numbers
+        )
 
     @property
     def cited_chunk_ids(self) -> tuple[str, ...]:
-        return tuple(dict.fromkeys(claim.chunk_id for claim in self.valid_claims if claim.chunk_id))
+        return tuple(
+            dict.fromkeys(
+                claim.chunk_id for claim in self.valid_claims if claim.chunk_id
+            )
+        )
 
     def as_dict(self) -> dict[str, object]:
         return {

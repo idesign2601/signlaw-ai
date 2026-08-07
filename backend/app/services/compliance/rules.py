@@ -79,7 +79,9 @@ RULE_LOCATIONS: tuple[RuleLocation, ...] = (
         Dimension.ILLUMINATION,
         ("channel letter illumination", "internally illuminated", "halo lit"),
     ),
-    _location(SignType.CHANNEL_LETTER, Dimension.PERMIT, ("sign permit required", "permit")),
+    _location(
+        SignType.CHANNEL_LETTER, Dimension.PERMIT, ("sign permit required", "permit")
+    ),
     # --- pylon and freestanding ----------------------------------------------
     _location(
         SignType.PYLON,
@@ -118,7 +120,9 @@ RULE_LOCATIONS: tuple[RuleLocation, ...] = (
         ("setback", "property line", "sight triangle"),
         _LENGTH_UNITS,
     ),
-    _location(SignType.FREESTANDING, Dimension.PERMIT, ("sign permit required", "permit")),
+    _location(
+        SignType.FREESTANDING, Dimension.PERMIT, ("sign permit required", "permit")
+    ),
     # --- window --------------------------------------------------------------
     _location(
         SignType.WINDOW,

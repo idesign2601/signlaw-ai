@@ -34,7 +34,9 @@ class TestReadsLimits:
         assert limit.value == 0.2
 
     def test_percentage_of_window_area(self) -> None:
-        limit = extract_limit("Window signs shall not exceed 25 percent of the window area.")
+        limit = extract_limit(
+            "Window signs shall not exceed 25 percent of the window area."
+        )
         assert limit is not None
         assert (limit.value, limit.unit) == (25.0, "%")
 
@@ -99,7 +101,9 @@ class TestUnitGuard:
         )
 
     def test_expected_unit_is_accepted(self) -> None:
-        limit = extract_limit("The maximum height is 7.5 metres.", expected_units=("m",))
+        limit = extract_limit(
+            "The maximum height is 7.5 metres.", expected_units=("m",)
+        )
         assert limit is not None
         assert limit.unit == "m"
 

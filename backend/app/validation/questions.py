@@ -23,7 +23,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from enum import StrEnum
 
-__all__ = ["VALIDATION_QUESTIONS", "QuestionClass", "ValidationQuestion"]
+__all__ = ["VALIDATION_QUESTIONS", "ValidationQuestion", "QuestionClass"]
 
 
 class QuestionClass(StrEnum):
@@ -144,7 +144,10 @@ VALIDATION_QUESTIONS: tuple[ValidationQuestion, ...] = (
     ),
     ValidationQuestion(
         id="cmp-three-city-temporary",
-        question=("Compare temporary sign regulations between Burnaby, Vancouver and Surrey."),
+        question=(
+            "Compare temporary sign regulations between Burnaby, Vancouver "
+            "and Surrey."
+        ),
         kind=QuestionClass.COMPARISON,
         expected_municipalities=_CITIES,
         notes="Three-way fan-out. Stresses context assembly against the window.",
@@ -264,10 +267,14 @@ VALIDATION_QUESTIONS: tuple[ValidationQuestion, ...] = (
 
 def questions_for(city: str) -> tuple[ValidationQuestion, ...]:
     return tuple(
-        question for question in VALIDATION_QUESTIONS if city in question.expected_municipalities
+        question
+        for question in VALIDATION_QUESTIONS
+        if city in question.expected_municipalities
     )
 
 
 def behavioural_questions() -> tuple[ValidationQuestion, ...]:
     """Questions where declining is the correct outcome."""
-    return tuple(question for question in VALIDATION_QUESTIONS if not question.expects_answer)
+    return tuple(
+        question for question in VALIDATION_QUESTIONS if not question.expects_answer
+    )

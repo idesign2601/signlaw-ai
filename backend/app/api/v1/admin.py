@@ -10,6 +10,7 @@ questions, the admin key lets someone change what the answers are made of.
 
 from __future__ import annotations
 
+import uuid
 from typing import Annotated
 
 from fastapi import APIRouter, BackgroundTasks, File, Form, HTTPException, Request, status
@@ -80,7 +81,10 @@ async def upload_document(
     if found is None:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=(f"Unknown municipality '{municipality}'. Use a slug from GET /municipalities."),
+            detail=(
+                f"Unknown municipality '{municipality}'. Use a slug from "
+                "GET /municipalities."
+            ),
         )
 
     province_record, municipality_record = found
@@ -90,7 +94,8 @@ async def upload_document(
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=(
-                f"{municipality_record.official_name} is in {province_record.name}, not {province}."
+                f"{municipality_record.official_name} is in "
+                f"{province_record.name}, not {province}."
             ),
         )
 
@@ -115,7 +120,9 @@ async def upload_document(
     try:
         path = store_upload(upload, settings)
     except ValueError as exc:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)
+        ) from exc
 
     job_id = await create_job(session, path)
     await session.commit()

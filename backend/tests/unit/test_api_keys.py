@@ -37,7 +37,9 @@ class TestVerifyApiKey:
             verify_api_key("z" * 64, settings)
 
     @pytest.mark.parametrize("provided", [None, ""])
-    def test_missing_key_is_rejected(self, provided: str | None, settings_factory) -> None:
+    def test_missing_key_is_rejected(
+        self, provided: str | None, settings_factory
+    ) -> None:
         settings = settings_factory(security={"api_keys": [KEY_A]})
         with pytest.raises(AuthenticationError, match=API_KEY_HEADER):
             verify_api_key(provided, settings)

@@ -39,7 +39,7 @@ from app.core.logging import get_logger
 from app.services.rag_service import AnswerOutcome, AnswerResult, RagService
 from app.validation.questions import VALIDATION_QUESTIONS, ValidationQuestion
 
-__all__ = ["IngestionMetrics", "QuestionRun", "ValidationHarness", "ValidationReport"]
+__all__ = ["IngestionMetrics", "ValidationHarness", "ValidationReport", "QuestionRun"]
 
 logger = get_logger(__name__)
 
@@ -141,7 +141,9 @@ class QuestionRun:
 
     @property
     def cited_stale(self) -> bool:
-        return any(status in {"superseded", "repealed"} for status in self.cited_statuses)
+        return any(
+            status in {"superseded", "repealed"} for status in self.cited_statuses
+        )
 
     @property
     def citation_verification_rate(self) -> float | None:
@@ -175,13 +177,19 @@ class ValidationReport:
     @property
     def ingestion_success_rate(self) -> float:
         return (
-            self.documents_ingested / self.documents_attempted if self.documents_attempted else 0.0
+            self.documents_ingested / self.documents_attempted
+            if self.documents_attempted
+            else 0.0
         )
 
     @property
     def documents_without_sections(self) -> list[str]:
         """Documents whose chunks cannot carry a clause-level citation."""
-        return [doc.filename for doc in self.corpus if doc.succeeded and not doc.sections_detected]
+        return [
+            doc.filename
+            for doc in self.corpus
+            if doc.succeeded and not doc.sections_detected
+        ]
 
     @property
     def total_chunks(self) -> int:
@@ -261,7 +269,11 @@ class ValidationReport:
 
     @property
     def abstention_rate(self) -> float:
-        return sum(1 for run in self.runs if run.abstained) / len(self.runs) if self.runs else 0.0
+        return (
+            sum(1 for run in self.runs if run.abstained) / len(self.runs)
+            if self.runs
+            else 0.0
+        )
 
     @property
     def correct_abstention_rate(self) -> float:
@@ -297,7 +309,9 @@ class ValidationReport:
     def retrieval_precision(self) -> float:
         """Mean municipality-scoping precision across scoped questions."""
         values = [
-            run.retrieval_precision for run in self.runs if run.retrieval_precision is not None
+            run.retrieval_precision
+            for run in self.runs
+            if run.retrieval_precision is not None
         ]
         return statistics.mean(values) if values else 0.0
 
@@ -329,7 +343,9 @@ class ValidationReport:
         return {
             "run": {
                 "started_at": self.started_at.isoformat(),
-                "finished_at": (self.finished_at.isoformat() if self.finished_at else None),
+                "finished_at": (
+                    self.finished_at.isoformat() if self.finished_at else None
+                ),
                 "embedding_model": self.embedding_model,
                 "llm_model": self.llm_model,
                 "collection": self.collection,
@@ -439,7 +455,8 @@ class ValidationReport:
                 [
                     f"### {index}. {run.question.question}",
                     "",
-                    f"**Confidence:** {run.confidence_band.upper()} ({run.confidence:.2f})",
+                    f"**Confidence:** {run.confidence_band.upper()} "
+                    f"({run.confidence:.2f})",
                     "",
                     run.answer,
                     "",
@@ -448,7 +465,9 @@ class ValidationReport:
                 ]
             )
             if run.cited_sections:
-                lines.extend(f"- s. {section}" for section in run.cited_sections)
+                lines.extend(
+                    f"- s. {section}" for section in run.cited_sections
+                )
             else:
                 lines.append("- none")
             lines.append("")
@@ -545,11 +564,15 @@ class ValidationHarness:
             generation_ms=trace.generation_ms if trace else 0,
             citations=len(result.citations),
             verified_citations=verified,
-            cited_sections=tuple(citation.section or "" for citation in result.citations),
+            cited_sections=tuple(
+                citation.section or "" for citation in result.citations
+            ),
             cited_municipalities=tuple(
                 citation.municipality or "" for citation in result.citations
             ),
-            cited_statuses=tuple(citation.amendment_status for citation in result.citations),
+            cited_statuses=tuple(
+                citation.amendment_status for citation in result.citations
+            ),
             retrieved_chunks=len(trace.retrieved_chunk_ids) if trace else 0,
             retrieved_municipalities=retrieved_municipalities,
             confidence=result.confidence_score,
@@ -580,9 +603,11 @@ def render_report(report: ValidationReport) -> str:
         f"    embedding rate    {report.embedding_throughput:.1f} chunks/s",
         "",
         "  LATENCY",
-        f"    retrieval p50/p95 {report.retrieval_p50_ms:.0f} / {report.retrieval_p95_ms:.0f} ms",
+        f"    retrieval p50/p95 {report.retrieval_p50_ms:.0f} / "
+        f"{report.retrieval_p95_ms:.0f} ms",
         f"    generation p50    {report.generation_p50_ms:.0f} ms",
-        f"    answer p50/p95    {report.answer_p50_ms:.0f} / {report.answer_p95_ms:.0f} ms",
+        f"    answer p50/p95    {report.answer_p50_ms:.0f} / "
+        f"{report.answer_p95_ms:.0f} ms",
         "",
         "  CITATIONS",
         f"    verification rate {report.citation_verification_rate:.1%}",

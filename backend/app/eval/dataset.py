@@ -26,11 +26,12 @@ fields are filled in by whoever verifies the case against the real bylaw.
 from __future__ import annotations
 
 import json
+from collections.abc import Sequence
 from dataclasses import asdict, dataclass, field
 from enum import StrEnum
 from pathlib import Path
 
-__all__ = ["SEED_CASES", "EvalCase", "EvalKind", "EvalSuite"]
+__all__ = ["EvalCase", "EvalKind", "EvalSuite", "SEED_CASES"]
 
 
 class EvalKind(StrEnum):
@@ -121,7 +122,9 @@ class EvalSuite:
 
     def by_municipality(self, slug: str) -> EvalSuite:
         return EvalSuite(
-            cases=[case for case in self.cases if slug in case.expected_municipalities]
+            cases=[
+                case for case in self.cases if slug in case.expected_municipalities
+            ]
         )
 
     def __len__(self) -> int:
@@ -230,7 +233,8 @@ SEED_CASES: tuple[EvalCase, ...] = (
     EvalCase(
         id="cmp-langley-city-vs-township",
         question=(
-            "Compare sign regulations between the City of Langley and the Township of Langley."
+            "Compare sign regulations between the City of Langley and the "
+            "Township of Langley."
         ),
         kind=EvalKind.COMPARISON,
         expected_municipalities=("langley-city", "langley-township"),

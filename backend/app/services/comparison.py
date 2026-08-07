@@ -102,7 +102,10 @@ class ComparisonReport:
     @property
     def citations(self) -> list[MeasuredValue]:
         return [
-            side.evidence for row in self.rows for side in row.sides if side.evidence is not None
+            side.evidence
+            for row in self.rows
+            for side in row.sides
+            if side.evidence is not None
         ]
 
 
@@ -115,7 +118,9 @@ class MunicipalityComparisonService:
     async def compare(
         self, sign_type: SignType, municipality_slugs: tuple[str, ...]
     ) -> ComparisonReport:
-        report = ComparisonReport(sign_type=sign_type, municipality_slugs=municipality_slugs)
+        report = ComparisonReport(
+            sign_type=sign_type, municipality_slugs=municipality_slugs
+        )
 
         if len(municipality_slugs) < 2:
             report.warnings.append("Comparison needs at least two municipalities.")
@@ -130,7 +135,10 @@ class MunicipalityComparisonService:
         )
 
         for dimension in dimensions:
-            sides = [await self._side(sign_type, slug, dimension) for slug in municipality_slugs]
+            sides = [
+                await self._side(sign_type, slug, dimension)
+                for slug in municipality_slugs
+            ]
             report.rows.append(ComparisonRow(dimension=dimension, sides=tuple(sides)))
 
         if any(not row.is_comparable for row in report.rows):
@@ -168,7 +176,9 @@ class MunicipalityComparisonService:
         )
 
         report = await self.engine.check(probe)
-        check = next((item for item in report.checks if item.dimension is dimension), None)
+        check = next(
+            (item for item in report.checks if item.dimension is dimension), None
+        )
 
         if check is None or check.outcome is ComplianceOutcome.INSUFFICIENT_INFORMATION:
             return ComparisonSide(
@@ -185,6 +195,8 @@ class MunicipalityComparisonService:
             municipality_slug=municipality_slug,
             value=check.limit,
             unit=check.unit,
-            is_ratio_of_frontage=bool(check.evidence and check.evidence.is_ratio_of_frontage),
+            is_ratio_of_frontage=bool(
+                check.evidence and check.evidence.is_ratio_of_frontage
+            ),
             evidence=check.evidence,
         )

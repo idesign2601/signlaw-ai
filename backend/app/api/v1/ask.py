@@ -67,14 +67,18 @@ async def ask(payload: AskRequest, service: RagServiceDep) -> AskResponse:
             )
         # in_force_only is not configurable by the caller. Answering from
         # repealed text is not a preference.
-        filters = RetrievalFilters(municipality_slugs=(found[1].slug,), in_force_only=True)
+        filters = RetrievalFilters(
+            municipality_slugs=(found[1].slug,), in_force_only=True
+        )
 
     result = await service.answer(payload.question, filters=filters, top_n=payload.top_n)
 
     if result.outcome.is_infrastructure_failure:
         # Distinguished from an abstention: this is our fault, and a caller
         # should retry rather than tell the user the bylaw is silent.
-        raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail=result.answer)
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail=result.answer
+        )
 
     return _to_response(result, took_ms=int((time.perf_counter() - started) * 1000))
 
