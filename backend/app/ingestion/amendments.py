@@ -34,7 +34,7 @@ from datetime import date
 from app.core.logging import get_logger
 from app.db.enums import DocType, DocumentStatus, RelationType
 
-__all__ = ["LineageResolver", "ResolvedDocument", "DocumentFacts", "RelationEdge"]
+__all__ = ["DocumentFacts", "LineageResolver", "RelationEdge", "ResolvedDocument"]
 
 logger = get_logger(__name__)
 
@@ -196,9 +196,7 @@ class LineageResolver:
 
         return resolved
 
-    def _resolve_one(
-        self, fact: DocumentFacts, repealed: set[str]
-    ) -> ResolvedDocument:
+    def _resolve_one(self, fact: DocumentFacts, repealed: set[str]) -> ResolvedDocument:
         amendment_date = self._last_amendment_date(fact)
 
         if fact.document_id in repealed:
@@ -273,10 +271,7 @@ class LineageResolver:
                         fact.document_id,
                         DocumentStatus.SUPERSEDED,
                         amendment_date,
-                        (
-                            f"absorbed into a consolidation dated "
-                            f"{target.consolidation_date}"
-                        ),
+                        (f"absorbed into a consolidation dated {target.consolidation_date}"),
                     )
 
         return ResolvedDocument(
@@ -314,9 +309,7 @@ class LineageResolver:
         return max(dates) if dates else None
 
     def _lookup(self, municipality_slug: str, number: str) -> list[DocumentFacts]:
-        return self._by_number.get(
-            (municipality_slug, _normalise_number(number)), []
-        )
+        return self._by_number.get((municipality_slug, _normalise_number(number)), [])
 
 
 def _normalise_number(number: str) -> str:

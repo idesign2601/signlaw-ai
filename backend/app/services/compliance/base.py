@@ -185,9 +185,7 @@ class ComplianceReport:
         """
         if any(check.outcome is ComplianceOutcome.EXCEEDS for check in self.checks):
             return ComplianceOutcome.EXCEEDS
-        if not self.checks or any(
-            not check.outcome.is_determinate for check in self.checks
-        ):
+        if not self.checks or any(not check.outcome.is_determinate for check in self.checks):
             return ComplianceOutcome.INSUFFICIENT_INFORMATION
         return ComplianceOutcome.COMPLIES
 

@@ -120,8 +120,6 @@ class TestSelectiveOcr:
         # A forty-page bylaw with three scanned pages must pay for three.
         pages = [CLEAN_PAGE] * 37 + ["", "", "12"]
         needing = [
-            index
-            for index, text in enumerate(pages)
-            if should_ocr_page(text, min_chars=MIN_CHARS)
+            index for index, text in enumerate(pages) if should_ocr_page(text, min_chars=MIN_CHARS)
         ]
         assert needing == [37, 38, 39]

@@ -34,10 +34,8 @@ class TestResolves:
         assert result.municipality.slug == "vancouver"
         assert "V6C" not in result.street_address
 
-    def test_street_named_after_a_city_is_not_the_city(
-        self, parser: AddressParser
-    ) -> None:
-        """"123 Burnaby Street, Vancouver" is in Vancouver.
+    def test_street_named_after_a_city_is_not_the_city(self, parser: AddressParser) -> None:
+        """ "123 Burnaby Street, Vancouver" is in Vancouver.
 
         Canadian address order puts the municipality last, so the trailing match
         wins — and the street name must survive into the address handed to the

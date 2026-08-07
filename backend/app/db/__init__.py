@@ -5,12 +5,6 @@ Importing this package imports every model, which is what makes
 """
 
 from app.db.base import Base, metadata
-from app.db.vectors import (
-    CHUNK_EMBEDDING_TABLES,
-    EmbeddingCollection,
-    embedding_model_for,
-    embedding_table_name,
-)
 from app.db.models import (
     AnswerFeedback,
     BylawRelation,
@@ -25,6 +19,12 @@ from app.db.models import (
     Page,
     Province,
     Section,
+)
+from app.db.vectors import (
+    CHUNK_EMBEDDING_TABLES,
+    EmbeddingCollection,
+    embedding_model_for,
+    embedding_table_name,
 )
 
 __all__ = [

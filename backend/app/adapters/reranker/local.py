@@ -126,9 +126,7 @@ class LocalCrossEncoderReranker:
         """
         parts: list[str] = []
         if chunk.section_number or chunk.section_heading:
-            label = " ".join(
-                part for part in (chunk.section_number, chunk.section_heading) if part
-            )
+            label = " ".join(part for part in (chunk.section_number, chunk.section_heading) if part)
             parts.append(label)
         parts.append(chunk.body[:_MAX_PASSAGE_CHARS])
         return "\n".join(parts)

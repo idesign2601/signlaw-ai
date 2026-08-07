@@ -67,9 +67,7 @@ async def service():
             yield RagService(
                 retriever=HybridRetriever(
                     session=session,
-                    embedder=build_embedding_provider(
-                        settings.embedding, cache_dir=cache
-                    ),
+                    embedder=build_embedding_provider(settings.embedding, cache_dir=cache),
                     settings=settings.retrieval,
                     vector_settings=settings.vector,
                     reranker=build_reranker(
@@ -132,8 +130,7 @@ class TestCalibration:
             pytest.skip("not enough cases in both bands to assess calibration")
 
         assert high["pass_rate"] > low["pass_rate"], (
-            f"confidence is not predictive: high={high['pass_rate']:.0%} "
-            f"low={low['pass_rate']:.0%}"
+            f"confidence is not predictive: high={high['pass_rate']:.0%} low={low['pass_rate']:.0%}"
         )
 
 

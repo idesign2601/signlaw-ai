@@ -70,10 +70,7 @@ def reciprocal_rank_fusion(
         )
         scores[chunk.chunk_id] += contribution
 
-    fused = [
-        replace(chunk, fused_score=scores[chunk_id])
-        for chunk_id, chunk in merged.items()
-    ]
+    fused = [replace(chunk, fused_score=scores[chunk_id]) for chunk_id, chunk in merged.items()]
     fused.sort(key=lambda chunk: (-chunk.fused_score, chunk.chunk_id))
 
     return fused[:limit] if limit is not None else fused

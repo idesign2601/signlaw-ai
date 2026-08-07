@@ -208,16 +208,12 @@ async def permit_checklist(
         "a comparison."
     ),
 )
-async def compare(
-    payload: ComparisonRequest, service: RagServiceDep
-) -> ComparisonResponse:
+async def compare(payload: ComparisonRequest, service: RagServiceDep) -> ComparisonResponse:
     sign_type = _sign_type(payload.sign_type)
     for slug in payload.municipalities:
         _municipality(slug)
 
-    comparison = MunicipalityComparisonService(
-        engine=ComplianceEngine(retriever=service.retriever)
-    )
+    comparison = MunicipalityComparisonService(engine=ComplianceEngine(retriever=service.retriever))
     report = await comparison.compare(sign_type, tuple(payload.municipalities))
 
     return ComparisonResponse(

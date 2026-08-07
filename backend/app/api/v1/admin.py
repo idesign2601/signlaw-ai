@@ -10,10 +10,18 @@ questions, the admin key lets someone change what the answers are made of.
 
 from __future__ import annotations
 
-import uuid
 from typing import Annotated
 
-from fastapi import APIRouter, BackgroundTasks, File, Form, HTTPException, Request, status
+from fastapi import (
+    APIRouter,
+    BackgroundTasks,
+    File,
+    Form,
+    HTTPException,
+    Request,
+    UploadFile,
+    status,
+)
 from sqlalchemy import text
 
 from app.api.deps import DbSession, SettingsDep
@@ -85,10 +93,7 @@ async def upload_document(
     if found is None:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=(
-                f"Unknown municipality '{municipality}'. Use a slug from "
-                "GET /municipalities."
-            ),
+            detail=(f"Unknown municipality '{municipality}'. Use a slug from GET /municipalities."),
         )
 
     province_record, municipality_record = found
@@ -98,35 +103,40 @@ async def upload_document(
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=(
-                f"{municipality_record.official_name} is in "
-                f"{province_record.name}, not {province}."
+                f"{municipality_record.official_name} is in {province_record.name}, not {province}."
             ),
         )
 
+    content = await file.read()
+
     limit_bytes = settings.security.max_request_body_mb * 1024 * 1024
-    if len(file) > limit_bytes:
+    if len(content) > limit_bytes:
         raise HTTPException(
             status_code=status.HTTP_413_CONTENT_TOO_LARGE,
             detail=(
-                f"File is {len(file) // 1_048_576} MB; the limit is "
+                f"File is {len(content) // 1_048_576} MB; the limit is "
                 f"{settings.security.max_request_body_mb} MB."
             ),
+        )
+
+    if not content:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="The uploaded file is empty.",
         )
 
     upload = UploadRequest(
         municipality_slug=municipality_record.slug,
         title=title,
         year=year,
-        original_filename="upload.pdf",
-        content=file,
+        original_filename=file.filename or "upload.pdf",
+        content=content,
     )
 
     try:
         path = store_upload(upload, settings)
     except ValueError as exc:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)
-        ) from exc
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
 
     job_id = await create_job(session, path)
     await session.commit()
@@ -145,7 +155,7 @@ async def upload_document(
         "upload_accepted",
         filename=path.name,
         municipality=municipality_record.slug,
-        bytes=len(file),
+        bytes=len(content),
     )
 
     return UploadAccepted(

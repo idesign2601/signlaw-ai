@@ -219,9 +219,7 @@ class MetadataDetector:
         elif len(candidates) > 1:
             # Several municipalities named — usually cross-references. Record it
             # so an operator can see why detection declined to choose.
-            evidence["municipality_ambiguous"] = ", ".join(
-                record.name for record in candidates[:5]
-            )
+            evidence["municipality_ambiguous"] = ", ".join(record.name for record in candidates[:5])
 
         title = None
         title_match = _TITLE.search(head)
@@ -308,16 +306,15 @@ class MetadataDetector:
         return DocType.UNKNOWN
 
     @staticmethod
-    def _year_for(
-        head: str, consolidation_date: date | None, effective: date | None
-    ) -> int | None:
+    def _year_for(head: str, consolidation_date: date | None, effective: date | None) -> int | None:
         if effective:
             return effective.year
         if consolidation_date:
             return consolidation_date.year
         # "Sign Bylaw No. 4451, 2019" — the year attached to the citation.
-        titled = re.search(r"by-?law\s+no\.?\s*[\d-]+,?\s*(?P<year>19\d{2}|20\d{2})", head,
-                           re.IGNORECASE)
+        titled = re.search(
+            r"by-?law\s+no\.?\s*[\d-]+,?\s*(?P<year>19\d{2}|20\d{2})", head, re.IGNORECASE
+        )
         if titled:
             return int(titled.group("year"))
         return None

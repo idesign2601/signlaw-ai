@@ -314,12 +314,8 @@ class DocumentMetadata:
             bylaw_number=self.bylaw_number or other.bylaw_number,
             year=self.year or other.year,
             consolidation_date=self.consolidation_date or other.consolidation_date,
-            doc_type=(
-                self.doc_type if self.doc_type is not DocType.UNKNOWN else other.doc_type
-            ),
-            status=(
-                self.status if self.status is not DocumentStatus.UNKNOWN else other.status
-            ),
+            doc_type=(self.doc_type if self.doc_type is not DocType.UNKNOWN else other.doc_type),
+            status=(self.status if self.status is not DocumentStatus.UNKNOWN else other.status),
             source=self.source or other.source,
             confidence=max(self.confidence, other.confidence),
             evidence=merged_evidence,

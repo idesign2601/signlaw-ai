@@ -104,18 +104,14 @@ def _service(session: AsyncSession) -> IngestionService:
 
 
 class TestLineageIsActuallyRun:
-    async def test_a_lone_document_becomes_retrievable(
-        self, session: AsyncSession
-    ) -> None:
+    async def test_a_lone_document_becomes_retrievable(self, session: AsyncSession) -> None:
         """The regression.
 
         One document, no competing versions: it is the law, and must end up
         `in_force` or nothing can ever be retrieved.
         """
         municipality_id = await _municipality(session, "testville")
-        document_id = await _document(
-            session, municipality_id, bylaw_number="9001", year=2020
-        )
+        document_id = await _document(session, municipality_id, bylaw_number="9001", year=2020)
         await session.flush()
 
         await _service(session).resolve_lineage()
@@ -151,9 +147,7 @@ class TestLineageIsActuallyRun:
         assert statuses[str(newer)] == "in_force"
         assert statuses[str(older)] == "superseded"
 
-    async def test_undetectable_municipality_stays_unknown(
-        self, session: AsyncSession
-    ) -> None:
+    async def test_undetectable_municipality_stays_unknown(self, session: AsyncSession) -> None:
         """Never assumed current.
 
         Without a municipality the document cannot be placed against its
@@ -161,7 +155,10 @@ class TestLineageIsActuallyRun:
         prevent.
         """
         document_id = await _document(
-            session, None, bylaw_number="9003", year=2020  # type: ignore[arg-type]
+            session,
+            None,
+            bylaw_number="9003",
+            year=2020,  # type: ignore[arg-type]
         )
         await session.flush()
 
@@ -172,18 +169,13 @@ class TestLineageIsActuallyRun:
         )
         assert status == "unknown"
 
-    async def test_human_verification_is_not_overwritten(
-        self, session: AsyncSession
-    ) -> None:
+    async def test_human_verification_is_not_overwritten(self, session: AsyncSession) -> None:
         """An operator who checked the register outranks the resolver."""
         municipality_id = await _municipality(session, "testopolis")
-        document_id = await _document(
-            session, municipality_id, bylaw_number="9004", year=2020
-        )
+        document_id = await _document(session, municipality_id, bylaw_number="9004", year=2020)
         await session.execute(
             text(
-                "UPDATE document SET verified_by_human = true, status = 'repealed' "
-                "WHERE id = :id"
+                "UPDATE document SET verified_by_human = true, status = 'repealed' WHERE id = :id"
             ),
             {"id": document_id},
         )
@@ -198,9 +190,7 @@ class TestLineageIsActuallyRun:
 
 
 class TestLineageEdges:
-    async def test_version_ordering_creates_a_relation(
-        self, session: AsyncSession
-    ) -> None:
+    async def test_version_ordering_creates_a_relation(self, session: AsyncSession) -> None:
         """bylaw_relation was empty in every run before this wiring existed."""
         municipality_id = await _municipality(session, "edgeville")
         await _document(
@@ -220,8 +210,6 @@ class TestLineageEdges:
         await _service(session).resolve_lineage()
 
         edges = await session.scalar(
-            text(
-                "SELECT count(*) FROM bylaw_relation WHERE detected_by = 'version_ordering'"
-            )
+            text("SELECT count(*) FROM bylaw_relation WHERE detected_by = 'version_ordering'")
         )
         assert edges >= 1

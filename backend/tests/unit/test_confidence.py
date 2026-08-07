@@ -95,9 +95,7 @@ class TestStaleDocumentsCapConfidence:
 
 class TestMissingEvidence:
     def test_no_citations_scores_low(self) -> None:
-        report = score(
-            ConfidenceScorer(), [chunk("c1")], [], citation_precision=0.0
-        )
+        report = score(ConfidenceScorer(), [chunk("c1")], [], citation_precision=0.0)
         assert report.band in {ConfidenceBand.LOW, ConfidenceBand.INSUFFICIENT}
         assert any("no verified citation" in w for w in report.warnings)
 
@@ -119,9 +117,7 @@ class TestMissingEvidence:
 
     def test_uncited_claims_lower_the_score(self) -> None:
         clean = score(ConfidenceScorer(), [chunk("c1")], ["c1"])
-        messy = score(
-            ConfidenceScorer(), [chunk("c1")], ["c1"], uncited_claim_count=3
-        )
+        messy = score(ConfidenceScorer(), [chunk("c1")], ["c1"], uncited_claim_count=3)
         assert messy.score < clean.score
         assert any("without a citation" in w for w in messy.warnings)
 
@@ -129,22 +125,16 @@ class TestMissingEvidence:
 class TestMissingMunicipality:
     def test_unresolved_municipality_lowers_confidence(self) -> None:
         resolved = score(ConfidenceScorer(), [chunk("c1")], ["c1"])
-        unresolved = score(
-            ConfidenceScorer(), [chunk("c1")], ["c1"], municipality_resolved=False
-        )
+        unresolved = score(ConfidenceScorer(), [chunk("c1")], ["c1"], municipality_resolved=False)
         assert unresolved.score < resolved.score
 
     def test_warning_explains_the_risk(self) -> None:
-        report = score(
-            ConfidenceScorer(), [chunk("c1")], ["c1"], municipality_resolved=False
-        )
+        report = score(ConfidenceScorer(), [chunk("c1")], ["c1"], municipality_resolved=False)
         assert any("may not apply to your city" in w for w in report.warnings)
 
     def test_missing_section_lowers_confidence(self) -> None:
         with_section = score(ConfidenceScorer(), [chunk("c1")], ["c1"])
-        without = score(
-            ConfidenceScorer(), [chunk("c1", section_number=None)], ["c1"]
-        )
+        without = score(ConfidenceScorer(), [chunk("c1", section_number=None)], ["c1"])
         assert without.score < with_section.score
 
 
@@ -152,9 +142,7 @@ class TestConflictingEvidence:
     def test_conflicts_lower_corroboration(self) -> None:
         chunks = [chunk("c1"), chunk("c2", section_number="5.4")]
         agreeing = score(ConfidenceScorer(), chunks, ["c1", "c2"])
-        conflicting = score(
-            ConfidenceScorer(), chunks, ["c1", "c2"], has_conflicts=True
-        )
+        conflicting = score(ConfidenceScorer(), chunks, ["c1", "c2"], has_conflicts=True)
         assert conflicting.score < agreeing.score
         assert any("disagree" in w for w in conflicting.warnings)
 
