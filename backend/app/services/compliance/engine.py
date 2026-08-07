@@ -14,7 +14,7 @@ for finding one and arithmetic to apply once it has.
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 
 from app.core.logging import get_logger
 from app.rag.results import RetrievedChunk
@@ -86,9 +86,7 @@ class ComplianceEngine:
 
     # -- one dimension -------------------------------------------------------
 
-    async def _check_one(
-        self, spec: SignSpec, location: RuleLocation
-    ) -> ComplianceCheck | None:
+    async def _check_one(self, spec: SignSpec, location: RuleLocation) -> ComplianceCheck | None:
         proposed = self._proposed(spec, location.dimension)
 
         # Permit and illumination are not numeric comparisons; they are answered
@@ -132,23 +130,14 @@ class ComplianceEngine:
                 proposed=proposed,
                 unit=measured.unit,
                 evidence=measured,
-                detail=(
-                    "The limit is expressed per metre of frontage, which was "
-                    "not supplied."
-                ),
+                detail=("The limit is expressed per metre of frontage, which was not supplied."),
             )
 
-        within = (
-            proposed >= limit
-            if location.dimension in _MINIMUMS
-            else proposed <= limit
-        )
+        within = proposed >= limit if location.dimension in _MINIMUMS else proposed <= limit
 
         return ComplianceCheck(
             dimension=location.dimension,
-            outcome=(
-                ComplianceOutcome.COMPLIES if within else ComplianceOutcome.EXCEEDS
-            ),
+            outcome=(ComplianceOutcome.COMPLIES if within else ComplianceOutcome.EXCEEDS),
             proposed=proposed,
             limit=limit,
             unit=measured.unit,
@@ -156,9 +145,7 @@ class ComplianceEngine:
             detail=self._detail(location.dimension, proposed, limit, measured.unit, within),
         )
 
-    async def _retrieve(
-        self, spec: SignSpec, location: RuleLocation
-    ) -> list[RetrievedChunk]:
+    async def _retrieve(self, spec: SignSpec, location: RuleLocation) -> list[RetrievedChunk]:
         query = " ".join(
             (
                 *location.search_terms[:2],
@@ -180,7 +167,7 @@ class ComplianceEngine:
                 ),
                 top_n=self.top_n,
             )
-        except Exception as exc:  # noqa: BLE001 — degrade, never fail the request
+        except Exception as exc:
             logger.warning(
                 "compliance_retrieval_failed",
                 dimension=location.dimension.value,

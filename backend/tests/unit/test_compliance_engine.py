@@ -75,9 +75,7 @@ class TestVerdicts:
     async def test_within_the_limit_complies(self) -> None:
         engine = _engine(_chunk("A fascia sign shall not exceed 9.3 square metres."))
         report = await engine.check(
-            SignSpec(
-                sign_type=SignType.FASCIA, municipality_slug="burnaby", area_sq_m=6.0
-            )
+            SignSpec(sign_type=SignType.FASCIA, municipality_slug="burnaby", area_sq_m=6.0)
         )
 
         area = next(c for c in report.checks if c.dimension is Dimension.AREA)
@@ -87,9 +85,7 @@ class TestVerdicts:
     async def test_over_the_limit_exceeds(self) -> None:
         engine = _engine(_chunk("A fascia sign shall not exceed 9.3 square metres."))
         report = await engine.check(
-            SignSpec(
-                sign_type=SignType.FASCIA, municipality_slug="burnaby", area_sq_m=14.0
-            )
+            SignSpec(sign_type=SignType.FASCIA, municipality_slug="burnaby", area_sq_m=14.0)
         )
 
         assert report.outcome is ComplianceOutcome.EXCEEDS
@@ -98,9 +94,7 @@ class TestVerdicts:
         """The invariant. A number without its source is what this forbids."""
         engine = _engine(_chunk("A fascia sign shall not exceed 9.3 square metres."))
         report = await engine.check(
-            SignSpec(
-                sign_type=SignType.FASCIA, municipality_slug="burnaby", area_sq_m=6.0
-            )
+            SignSpec(sign_type=SignType.FASCIA, municipality_slug="burnaby", area_sq_m=6.0)
         )
 
         area = next(c for c in report.checks if c.dimension is Dimension.AREA)
@@ -111,9 +105,7 @@ class TestVerdicts:
 
     async def test_setback_is_a_minimum_not_a_maximum(self) -> None:
         """Reversing this reports a compliant sign as too close."""
-        engine = _engine(
-            _chunk("A freestanding sign shall not exceed 3 m from the property line.")
-        )
+        engine = _engine(_chunk("A freestanding sign shall not exceed 3 m from the property line."))
         report = await engine.check(
             SignSpec(
                 sign_type=SignType.FREESTANDING,
@@ -130,9 +122,7 @@ class TestVerdicts:
 class TestRefusesToGuess:
     async def test_nothing_retrieved_is_insufficient_not_compliant(self) -> None:
         report = await _engine().check(
-            SignSpec(
-                sign_type=SignType.FASCIA, municipality_slug="burnaby", area_sq_m=6.0
-            )
+            SignSpec(sign_type=SignType.FASCIA, municipality_slug="burnaby", area_sq_m=6.0)
         )
         assert report.outcome is ComplianceOutcome.INSUFFICIENT_INFORMATION
 
@@ -140,9 +130,7 @@ class TestRefusesToGuess:
         """A section that defers to a schedule is worth showing the reader."""
         engine = _engine(_chunk("Maximum sign area shall be as set out in Schedule B."))
         report = await engine.check(
-            SignSpec(
-                sign_type=SignType.FASCIA, municipality_slug="burnaby", area_sq_m=6.0
-            )
+            SignSpec(sign_type=SignType.FASCIA, municipality_slug="burnaby", area_sq_m=6.0)
         )
 
         area = next(c for c in report.checks if c.dimension is Dimension.AREA)
@@ -155,9 +143,7 @@ class TestRefusesToGuess:
             _chunk("Sign area shall not exceed 0.2 square metres per metre of frontage.")
         )
         report = await engine.check(
-            SignSpec(
-                sign_type=SignType.FASCIA, municipality_slug="burnaby", area_sq_m=6.0
-            )
+            SignSpec(sign_type=SignType.FASCIA, municipality_slug="burnaby", area_sq_m=6.0)
         )
 
         assert report.outcome is ComplianceOutcome.INSUFFICIENT_INFORMATION
@@ -203,9 +189,7 @@ class TestRetrievalScope:
         engine = ComplianceEngine(retriever=retriever)
 
         await engine.check(
-            SignSpec(
-                sign_type=SignType.FASCIA, municipality_slug="burnaby", area_sq_m=6.0
-            )
+            SignSpec(sign_type=SignType.FASCIA, municipality_slug="burnaby", area_sq_m=6.0)
         )
 
         filters = retriever.calls[0]
@@ -224,9 +208,7 @@ class TestRetrievalScope:
         )
 
         await ComplianceEngine(retriever=retriever).check(
-            SignSpec(
-                sign_type=SignType.FASCIA, municipality_slug="burnaby", area_sq_m=6.0
-            )
+            SignSpec(sign_type=SignType.FASCIA, municipality_slug="burnaby", area_sq_m=6.0)
         )
 
         assert retriever.calls[0].exclude_ocr is True

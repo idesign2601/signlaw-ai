@@ -22,8 +22,8 @@ from app.api.v1 import api_router
 from app.api.v1.admin import router as _admin_routes
 from app.api.v1.health import router as health_router
 from app.core.config import Settings, get_settings
-from app.core.security import require_admin
 from app.core.logging import configure_logging, get_logger
+from app.core.security import require_admin
 from app.db.session import create_engine, create_session_factory, dispose_engine
 from app.rag.collections import CollectionSpec
 
@@ -90,12 +90,8 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     from app.adapters.reranker import build_reranker
 
     cache_dir = str(settings.ingestion.tessdata_dir.parent / "huggingface")
-    app.state.embedder = build_embedding_provider(
-        settings.embedding, cache_dir=cache_dir
-    )
-    app.state.reranker = build_reranker(
-        settings.retrieval, settings.embedding, cache_dir=cache_dir
-    )
+    app.state.embedder = build_embedding_provider(settings.embedding, cache_dir=cache_dir)
+    app.state.reranker = build_reranker(settings.retrieval, settings.embedding, cache_dir=cache_dir)
     app.state.llm = build_llm_provider(settings.llm)
 
     try:

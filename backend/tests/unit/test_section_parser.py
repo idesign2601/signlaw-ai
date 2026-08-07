@@ -146,9 +146,7 @@ class TestFalsePositives:
         assert len(sections) == 1
 
     def test_cross_references_are_not_headings(self) -> None:
-        sections = parse_sections(
-            lines("5.3 Fascia Signs", "5.4 section 12 of this Bylaw applies")
-        )
+        sections = parse_sections(lines("5.3 Fascia Signs", "5.4 section 12 of this Bylaw applies"))
         assert len(sections) == 1
 
     def test_overlong_lines_are_not_headings(self) -> None:
@@ -177,8 +175,11 @@ class TestTypographicHeadings:
 
     def test_typographic_headings_have_no_section_number(self) -> None:
         # They organise the document but are not citable clauses.
-        content = [*lines("body", font=10.0), *lines("OVERVIEW", font=15.0),
-                   *lines("body", font=10.0)]
+        content = [
+            *lines("body", font=10.0),
+            *lines("OVERVIEW", font=15.0),
+            *lines("body", font=10.0),
+        ]
         sections = parse_sections(content)
         typographic = [s for s in sections if s.heading == "OVERVIEW"]
         assert typographic and typographic[0].section_number == ""
@@ -238,9 +239,7 @@ class TestNoHeadings:
 
 class TestOrdinals:
     def test_siblings_are_numbered_in_document_order(self) -> None:
-        sections = parse_sections(
-            lines("5.1 One", "x", "5.2 Two", "y", "5.3 Three", "z")
-        )
+        sections = parse_sections(lines("5.1 One", "x", "5.2 Two", "y", "5.3 Three", "z"))
         assert [section.ordinal for section in sections] == [0, 1, 2]
 
     def test_ordinals_restart_per_parent(self) -> None:

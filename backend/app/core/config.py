@@ -25,6 +25,7 @@ from pydantic import BaseModel, Field, SecretStr, field_validator, model_validat
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 __all__ = [
+    "SUPPORTED_EMBEDDING_DIMENSIONS",
     "DatabaseSettings",
     "EmbeddingProvider",
     "EmbeddingSettings",
@@ -37,7 +38,6 @@ __all__ = [
     "RedisSettings",
     "RetrievalSettings",
     "SecuritySettings",
-    "SUPPORTED_EMBEDDING_DIMENSIONS",
     "Settings",
     "VectorStoreSettings",
     "get_settings",
@@ -313,9 +313,7 @@ class VectorStoreSettings(BaseModel):
     @classmethod
     def _validate_prefix(cls, value: str) -> str:
         if not value.replace("_", "").isalnum():
-            raise ValueError(
-                "VECTOR__COLLECTION_PREFIX must be alphanumeric with underscores"
-            )
+            raise ValueError("VECTOR__COLLECTION_PREFIX must be alphanumeric with underscores")
         return value
 
     @field_validator("distance_metric")
@@ -397,8 +395,7 @@ class IngestionSettings(BaseModel):
             )
         if self.chunk_min_tokens >= self.chunk_target_tokens:
             raise ValueError(
-                "INGESTION__CHUNK_MIN_TOKENS must be smaller than "
-                "INGESTION__CHUNK_TARGET_TOKENS."
+                "INGESTION__CHUNK_MIN_TOKENS must be smaller than INGESTION__CHUNK_TARGET_TOKENS."
             )
         return self
 
@@ -491,6 +488,21 @@ class SecuritySettings(BaseModel):
     rate_limit_per_minute: int = Field(default=60, ge=1, le=10000)
     max_request_body_mb: int = Field(default=25, gt=0, le=1024)
 
+    @field_validator("admin_api_key", mode="before")
+    @classmethod
+    def _blank_is_unset(cls, value: object) -> object:
+        """Treat ``SECURITY__ADMIN_API_KEY=`` as absent rather than empty.
+
+        A bare key with no value is how every ``.env.example`` in existence
+        says "fill this in later", and it is what an operator leaves behind
+        while a deployment is half-configured. Reading it as a zero-length
+        secret fails validation with a message about length, which describes
+        the symptom and not the cause.
+        """
+        if isinstance(value, str) and not value.strip():
+            return None
+        return value
+
     @field_validator("admin_api_key")
     @classmethod
     def _reject_short_keys(cls, value: SecretStr | None) -> SecretStr | None:
@@ -504,11 +516,13 @@ class SecuritySettings(BaseModel):
     @field_validator("api_keys", mode="before")
     @classmethod
     def _split_api_keys(cls, value: object) -> object:
-        """Accept a comma-separated string as well as a JSON list.
+        """Accept a comma-separated string as well as a list.
 
-        Pydantic parses list fields from JSON, which makes a .env line awkward
-        to write and easy to get subtly wrong. A comma-separated value is what
-        anyone will actually type.
+        Applies when settings are constructed in code or from a plain
+        environment variable. **It does not apply to ``.env``**: pydantic reads
+        list-valued fields as JSON at the file source, before any validator
+        runs, so a bare value there fails to parse rather than reaching this.
+        ``.env`` must use ``["key"]``, as ``.env.example`` shows.
         """
         if isinstance(value, str) and not value.strip().startswith("["):
             return [part.strip() for part in value.split(",") if part.strip()]
@@ -551,7 +565,15 @@ class Settings(BaseSettings):
     """Root settings object."""
 
     model_config = SettingsConfigDict(
-        env_file=".env",
+        # Anchored to the repository root, not left relative.
+        #
+        # Pydantic resolves a relative env_file against the *working directory*.
+        # The Makefile runs everything from backend/, scripts run from the root,
+        # and the CLI runs from wherever the operator happens to be — so a
+        # relative path meant `.env` was silently not found and every setting
+        # fell back to its default. Nothing failed: the defaults are valid, so a
+        # configured model, device and password were simply ignored.
+        env_file=(_REPO_ROOT / ".env", ".env"),
         env_file_encoding="utf-8",
         env_nested_delimiter="__",
         extra="ignore",

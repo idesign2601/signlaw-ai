@@ -96,11 +96,13 @@ async def _indexed_document_counts(session: AsyncSession) -> dict[str, int]:
     """
     result = await session.execute(
         text(
-            "SELECT m.slug, count(d.id) AS documents "
+            # canonical_slug, not slug: the column carries the qualified form
+            # that keeps the two Langleys distinct.
+            "SELECT m.canonical_slug AS slug, count(d.id) AS documents "
             "FROM municipality m "
             "JOIN document d ON d.municipality_id = m.id "
             "WHERE d.status = CAST(:in_force AS document_status) "
-            "GROUP BY m.slug"
+            "GROUP BY m.canonical_slug"
         ),
         {"in_force": DocumentStatus.IN_FORCE.value},
     )

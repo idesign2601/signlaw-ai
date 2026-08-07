@@ -36,13 +36,7 @@ def _normalise_section(section: str) -> str:
     ``5.3(b)``, ``5.3 (b)`` and ``s. 5.3(b)`` are the same clause written three
     ways across municipal citation styles.
     """
-    return (
-        section.lower()
-        .replace("s.", "")
-        .replace("section", "")
-        .replace(" ", "")
-        .strip()
-    )
+    return section.lower().replace("s.", "").replace("section", "").replace(" ", "").strip()
 
 
 @dataclass(frozen=True, slots=True)
@@ -108,9 +102,7 @@ class CaseResult:
         )
 
 
-_BEHAVIOURAL_KINDS = frozenset(
-    {EvalKind.AMBIGUITY, EvalKind.OUT_OF_SCOPE, EvalKind.ABSTENTION}
-)
+_BEHAVIOURAL_KINDS = frozenset({EvalKind.AMBIGUITY, EvalKind.OUT_OF_SCOPE, EvalKind.ABSTENTION})
 
 
 def evaluate_case(
@@ -158,9 +150,7 @@ def evaluate_case(
 
     expected_cities = set(case.expected_municipalities)
     retrieved_city = (
-        bool(expected_cities & set(retrieved_municipalities))
-        if expected_cities
-        else True
+        bool(expected_cities & set(retrieved_municipalities)) if expected_cities else True
     )
 
     # --- citations ---------------------------------------------------------
@@ -182,9 +172,7 @@ def evaluate_case(
     contains_expected = all(
         fragment.lower() in lowered for fragment in case.expected_answer_contains
     )
-    contains_forbidden = any(
-        fragment.lower() in lowered for fragment in case.must_not_contain
-    )
+    contains_forbidden = any(fragment.lower() in lowered for fragment in case.must_not_contain)
 
     return CaseResult(
         case_id=case.id,
@@ -290,9 +278,7 @@ class SuiteReport:
         return {
             band: {
                 "count": len(items),
-                "pass_rate": round(
-                    sum(1 for item in items if item.passed) / len(items), 3
-                ),
+                "pass_rate": round(sum(1 for item in items if item.passed) / len(items), 3),
             }
             for band, items in sorted(buckets.items())
         }
@@ -334,17 +320,12 @@ class SuiteReport:
             "  confidence calibration",
         ]
         for band, stats in self.confidence_calibration().items():
-            lines.append(
-                f"    {band:<14} {stats['count']:>3} cases, "
-                f"{stats['pass_rate']:.0%} pass"
-            )
+            lines.append(f"    {band:<14} {stats['count']:>3} cases, {stats['pass_rate']:.0%} pass")
 
         failures = self.failures()
         if failures:
             lines.extend(["", "  failures"])
-            lines.extend(
-                f"    {result.case_id}: {_failure_reason(result)}" for result in failures
-            )
+            lines.extend(f"    {result.case_id}: {_failure_reason(result)}" for result in failures)
 
         return "\n".join(lines)
 

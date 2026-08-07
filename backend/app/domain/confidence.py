@@ -119,9 +119,7 @@ class ConfidenceScorer:
                 score=0.0,
                 band=ConfidenceBand.INSUFFICIENT,
                 factors=(),
-                explanation=(
-                    "No answer was produced: the indexed bylaws do not support one."
-                ),
+                explanation=("No answer was produced: the indexed bylaws do not support one."),
                 warnings=("no supporting bylaw text was found",),
             )
 
@@ -167,17 +165,13 @@ class ConfidenceScorer:
     ) -> ConfidenceFactor:
         if not cited:
             warnings.append("no verified citation supports this answer")
-            return ConfidenceFactor(
-                "citation", 0.0, self.weight_citation, "no verified citations"
-            )
+            return ConfidenceFactor("citation", 0.0, self.weight_citation, "no verified citations")
 
         score = precision
         if uncited_count:
             # Each uncited assertion is a claim the reader cannot check.
             score *= max(0.3, 1.0 - 0.25 * uncited_count)
-            warnings.append(
-                f"{uncited_count} statement(s) assert requirements without a citation"
-            )
+            warnings.append(f"{uncited_count} statement(s) assert requirements without a citation")
 
         return ConfidenceFactor(
             "citation",
@@ -190,19 +184,13 @@ class ConfidenceScorer:
         self, chunks: Sequence[RetrievedChunk], warnings: list[str]
     ) -> ConfidenceFactor:
         in_force = sum(1 for chunk in chunks if chunk.is_current)
-        unknown = sum(
-            1 for chunk in chunks if chunk.document_status is DocumentStatus.UNKNOWN
-        )
+        unknown = sum(1 for chunk in chunks if chunk.document_status is DocumentStatus.UNKNOWN)
         stale = len(chunks) - in_force - unknown
 
         if stale:
-            warnings.append(
-                f"{stale} cited excerpt(s) come from superseded or repealed bylaws"
-            )
+            warnings.append(f"{stale} cited excerpt(s) come from superseded or repealed bylaws")
         if unknown:
-            warnings.append(
-                f"{unknown} cited excerpt(s) have unconfirmed in-force status"
-            )
+            warnings.append(f"{unknown} cited excerpt(s) have unconfirmed in-force status")
 
         score = in_force / len(chunks) if chunks else 0.0
         # Unknown is not neutral: it means currency could not be established.
@@ -228,9 +216,7 @@ class ConfidenceScorer:
             )
 
         distinct_sections = {
-            (chunk.document_id, chunk.section_number)
-            for chunk in cited
-            if chunk.section_number
+            (chunk.document_id, chunk.section_number) for chunk in cited if chunk.section_number
         }
         count = len(distinct_sections)
 
@@ -289,9 +275,7 @@ class ConfidenceScorer:
 
         ocr_count = sum(1 for chunk in chunks if chunk.from_ocr)
         if ocr_count:
-            warnings.append(
-                f"{ocr_count} cited excerpt(s) come from OCR and may contain errors"
-            )
+            warnings.append(f"{ocr_count} cited excerpt(s) come from OCR and may contain errors")
 
         mean_extraction = sum(chunk.extraction_confidence for chunk in chunks) / len(chunks)
         ocr_penalty = 0.35 * (ocr_count / len(chunks))

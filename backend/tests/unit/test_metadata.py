@@ -47,9 +47,7 @@ class TestFullCoverPage:
         assert result.title is not None
         assert "sign bylaw" in result.title.lower()
 
-    def test_consolidation_date_is_the_version_date(
-        self, detector: MetadataDetector
-    ) -> None:
+    def test_consolidation_date_is_the_version_date(self, detector: MetadataDetector) -> None:
         result = detector.detect(filename="bylaw.pdf", page_texts=[COVER_PAGE])
         assert result.consolidation_date == date(2021, 7, 15)
 
@@ -80,9 +78,7 @@ class TestFilenameFallback:
 
     def test_document_text_outranks_the_filename(self, detector: MetadataDetector) -> None:
         # A renamed file is not evidence; the enacting clause is.
-        result = detector.detect(
-            filename="surrey_bylaw_9999.pdf", page_texts=[COVER_PAGE]
-        )
+        result = detector.detect(filename="surrey_bylaw_9999.pdf", page_texts=[COVER_PAGE])
         assert result.municipality_slug == "coquitlam"
         assert result.bylaw_number == "4451"
 
@@ -128,18 +124,12 @@ class TestAmbiguityIsNotGuessed:
 
 class TestAmendments:
     def test_amending_bylaw_is_classified(self, detector: MetadataDetector) -> None:
-        text = (
-            "CITY OF COQUITLAM\n"
-            "BYLAW NO. 4600\n"
-            "A bylaw to amend Sign Bylaw No. 4451\n"
-        )
+        text = "CITY OF COQUITLAM\nBYLAW NO. 4600\nA bylaw to amend Sign Bylaw No. 4451\n"
         result = detector.detect(filename="4600.pdf", page_texts=[text])
         assert result.doc_type is DocType.AMENDMENT
         assert "4451" in result.amends_bylaw_numbers
 
-    def test_own_number_is_not_listed_as_amended(
-        self, detector: MetadataDetector
-    ) -> None:
+    def test_own_number_is_not_listed_as_amended(self, detector: MetadataDetector) -> None:
         text = "BYLAW NO. 4600\nA bylaw to amend Sign Bylaw No. 4451"
         result = detector.detect(filename="x.pdf", page_texts=[text])
         assert "4600" not in result.amends_bylaw_numbers
@@ -184,9 +174,7 @@ class TestUnresolvedFields:
         missing = detector.unresolved_fields(result)
         assert {"municipality", "title", "bylaw_number"} <= set(missing)
 
-    def test_complete_metadata_has_nothing_missing(
-        self, detector: MetadataDetector
-    ) -> None:
+    def test_complete_metadata_has_nothing_missing(self, detector: MetadataDetector) -> None:
         result = detector.detect(filename="bylaw.pdf", page_texts=[COVER_PAGE])
         assert detector.unresolved_fields(result) == ()
 

@@ -123,9 +123,7 @@ class PermitChecklistService:
     retriever: RetrieverProtocol
     top_n: int = 3
 
-    async def build(
-        self, sign_type: SignType, municipality_slug: str
-    ) -> PermitChecklist:
+    async def build(self, sign_type: SignType, municipality_slug: str) -> PermitChecklist:
         checklist = PermitChecklist(
             municipality_slug=municipality_slug,
             municipality_name=None,
@@ -154,9 +152,7 @@ class PermitChecklistService:
     async def _item(
         self, topic: ChecklistTopic, sign_type: SignType, municipality_slug: str
     ) -> ChecklistItem:
-        query = " ".join(
-            (*_SEARCH_TERMS[topic][:2], sign_type.value.replace("_", " "), "sign")
-        )
+        query = " ".join((*_SEARCH_TERMS[topic][:2], sign_type.value.replace("_", " "), "sign"))
 
         try:
             chunks, _ = await self.retriever.retrieve(
@@ -166,10 +162,8 @@ class PermitChecklistService:
                 ),
                 top_n=self.top_n,
             )
-        except Exception as exc:  # noqa: BLE001 — degrade, never fail
-            logger.warning(
-                "checklist_retrieval_failed", topic=topic.value, error=str(exc)
-            )
+        except Exception as exc:
+            logger.warning("checklist_retrieval_failed", topic=topic.value, error=str(exc))
             chunks = []
 
         best = self._best(chunks, topic)
@@ -194,9 +188,7 @@ class PermitChecklistService:
         )
 
     @staticmethod
-    def _best(
-        chunks: list[RetrievedChunk], topic: ChecklistTopic
-    ) -> RetrievedChunk | None:
+    def _best(chunks: list[RetrievedChunk], topic: ChecklistTopic) -> RetrievedChunk | None:
         """The first chunk that actually mentions the topic.
 
         Retrieval returns the closest matches whether or not any is close. A
