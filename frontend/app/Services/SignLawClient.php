@@ -209,13 +209,35 @@ final class SignLawClient
             );
         }
 
+        // 422 names the field that failed. Surfacing it matters: "the upload
+        // could not be processed" gives an operator nothing to act on, and the
+        // backend already said exactly what was wrong.
+        if ($response->status() === 422) {
+            $fields = collect($response->json('errors') ?? [])
+                ->map(static fn (array $error): string => trim(
+                    ($error['field'] ?? '').' '.($error['message'] ?? '')
+                ))
+                ->filter()
+                ->implode('; ');
+
+            Log::error('signlaw.upload.rejected', ['body' => $response->body()]);
+
+            throw new RuntimeException(
+                $fields !== ''
+                    ? "The backend rejected the upload: {$fields}"
+                    : ($response->json('detail') ?? 'The upload failed validation.'),
+            );
+        }
+
         if ($response->failed()) {
             Log::error('signlaw.upload.failed', [
                 'status' => $response->status(),
                 'body' => $response->body(),
             ]);
 
-            throw new RuntimeException('The upload could not be processed.');
+            throw new RuntimeException(
+                "The upload could not be processed (HTTP {$response->status()}).",
+            );
         }
 
         return $response->json();

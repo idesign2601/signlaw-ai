@@ -68,8 +68,12 @@ async def upload_document(
     province: Annotated[str, Form(description="Province code, e.g. BC.")],
     municipality: Annotated[str, Form(description="Municipality slug.")],
     title: Annotated[str, Form(min_length=3, max_length=500)],
+    # UploadFile, not bytes. A multipart file part carries a filename and
+    # content type, and declaring it as raw bytes makes coercion depend on how
+    # the client happened to encode it — which is a contract that holds until
+    # someone uses a different HTTP library.
+    file: Annotated[UploadFile, File(description="The bylaw PDF.")],
     year: Annotated[int | None, Form(ge=1900, le=2100)] = None,
-    file: Annotated[bytes, File()] = b"",
 ) -> UploadAccepted:
     if not find_province(province):
         raise HTTPException(
