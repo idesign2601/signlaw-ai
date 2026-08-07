@@ -72,7 +72,9 @@ class SocrataZoningProvider:
 
         description = None
         if self.zoning_description_field:
-            description = str(record.get(self.zoning_description_field, "")).strip() or None
+            description = (
+                str(record.get(self.zoning_description_field, "")).strip() or None
+            )
 
         return ZoningResult(
             zoning_code=code,

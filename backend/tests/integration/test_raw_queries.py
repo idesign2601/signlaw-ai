@@ -43,7 +43,9 @@ async def session(engine) -> AsyncSession:
 
 
 class TestCoverageQuery:
-    async def test_document_counts_query_is_valid_sql(self, session: AsyncSession) -> None:
+    async def test_document_counts_query_is_valid_sql(
+        self, session: AsyncSession
+    ) -> None:
         """The regression.
 
         An empty corpus returns an empty mapping — the point is that Postgres
@@ -52,7 +54,9 @@ class TestCoverageQuery:
         counts = await _indexed_document_counts(session)
         assert isinstance(counts, dict)
 
-    async def test_counts_are_keyed_by_canonical_slug(self, session: AsyncSession) -> None:
+    async def test_counts_are_keyed_by_canonical_slug(
+        self, session: AsyncSession
+    ) -> None:
         """Keys must match what the province catalogue uses.
 
         A mismatch here would make every municipality report as unavailable
@@ -64,11 +68,17 @@ class TestCoverageQuery:
 
 
 class TestZoningQueries:
-    async def test_lookup_for_an_unknown_municipality(self, session: AsyncSession) -> None:
-        report = await ZoningService(session=session).lookup("123 Main Street", "atlantis")
+    async def test_lookup_for_an_unknown_municipality(
+        self, session: AsyncSession
+    ) -> None:
+        report = await ZoningService(session=session).lookup(
+            "123 Main Street", "atlantis"
+        )
         assert report.outcome is ZoningOutcome.UNSUPPORTED
 
-    async def test_lookup_against_a_real_municipality_row(self, session: AsyncSession) -> None:
+    async def test_lookup_against_a_real_municipality_row(
+        self, session: AsyncSession
+    ) -> None:
         """Exercises the municipality and parcel_zoning queries.
 
         With no GIS configuration the outcome is `unsupported`, which is the
@@ -78,7 +88,9 @@ class TestZoningQueries:
 
         from sqlalchemy import text
 
-        province_id = await session.scalar(text("SELECT id FROM province WHERE code = 'BC'"))
+        province_id = await session.scalar(
+            text("SELECT id FROM province WHERE code = 'BC'")
+        )
         municipality_id = uuid.uuid4()
         await session.execute(
             text(
@@ -89,5 +101,7 @@ class TestZoningQueries:
         )
         await session.flush()
 
-        report = await ZoningService(session=session).lookup("123 Main Street", "zoningville")
+        report = await ZoningService(session=session).lookup(
+            "123 Main Street", "zoningville"
+        )
         assert report.outcome is ZoningOutcome.UNSUPPORTED

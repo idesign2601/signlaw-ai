@@ -113,12 +113,18 @@ final class AdminController extends Controller
         /** @var UploadedFile $file */
         $file = $validated['document'];
 
+        // Cast rather than trust: validation checks the shape of a value, it
+        // does not convert it. An 'integer' rule still hands back the string
+        // that arrived in the request body.
+        $year = $validated['year'] ?? null;
+        $year = ($year === null || $year === '') ? null : (int) $year;
+
         try {
             $result = $this->client->uploadDocument(
                 province: $validated['province'],
                 municipality: $validated['municipality'],
                 title: $validated['title'],
-                year: $validated['year'] ?? null,
+                year: $year,
                 file: $file,
             );
         } catch (RuntimeException $exception) {

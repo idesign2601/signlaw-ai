@@ -53,7 +53,9 @@ class Citation(BaseModel):
     section_path: str | None
     page: int
     quote: str
-    amendment_status: str = Field(description="in_force, superseded, repealed or unknown.")
+    amendment_status: str = Field(
+        description="in_force, superseded, repealed or unknown."
+    )
     document_id: str = ""
     source_url: str | None = Field(
         default=None, description="Link to the source PDF at the cited page."

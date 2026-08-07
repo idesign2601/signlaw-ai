@@ -72,7 +72,9 @@ def build_provider(
         if resolved == "arcgis":
             provider = _arcgis(provider_name, endpoint, settings, map_url, geocoder)
         elif resolved == "opendatasoft":
-            provider = _opendatasoft(provider_name, endpoint, settings, map_url, geocoder)
+            provider = _opendatasoft(
+                provider_name, endpoint, settings, map_url, geocoder
+            )
         else:
             provider = _socrata(provider_name, endpoint, settings, map_url, geocoder)
     except KeyError as exc:

@@ -118,7 +118,9 @@ class PdfExtractor:
             char_offset = 0
 
             for page_index in range(document.page_count):
-                page, char_offset = self._extract_page(document, page_index, char_offset, path.name)
+                page, char_offset = self._extract_page(
+                    document, page_index, char_offset, path.name
+                )
                 pages.append(page)
                 if page.extraction_confidence < self.ocr_confidence_threshold:
                     needing_ocr.append(page.page_number)

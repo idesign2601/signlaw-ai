@@ -48,7 +48,9 @@ class ProvinceCoverage(BaseModel):
 
     code: str = Field(description="Two-letter code, e.g. 'BC'.")
     name: str
-    available: bool = Field(description="True when any municipality in this province is available.")
+    available: bool = Field(
+        description="True when any municipality in this province is available."
+    )
     municipalities: list[MunicipalityCoverage]
 
 

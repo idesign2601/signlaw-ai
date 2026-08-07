@@ -103,7 +103,9 @@ class TestDomainErrors:
         assert response.headers["Retry-After"] == "30"
 
     async def test_every_error_carries_the_request_id(self, error_client: AsyncClient) -> None:
-        response = await error_client.get("/_test/not-found", headers={"X-Request-ID": "trace-me"})
+        response = await error_client.get(
+            "/_test/not-found", headers={"X-Request-ID": "trace-me"}
+        )
         assert response.json()["request_id"] == "trace-me"
         assert response.headers["X-Request-ID"] == "trace-me"
 
@@ -138,7 +140,9 @@ class TestUnexpectedErrors:
             LifespanManager(error_app),
             AsyncClient(transport=transport, base_url="http://test") as client,
         ):
-            response = await client.get("/_test/unexpected", headers={"X-Request-ID": "trace-500"})
+            response = await client.get(
+                "/_test/unexpected", headers={"X-Request-ID": "trace-500"}
+            )
 
         assert response.json()["request_id"] == "trace-500"
         assert response.headers["X-Request-ID"] == "trace-500"

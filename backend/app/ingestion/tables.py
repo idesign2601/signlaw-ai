@@ -135,7 +135,9 @@ class TableExtractor:
 
     # -- internals -----------------------------------------------------------
 
-    def _build_table(self, table: Any, page_number: int, ordinal: int) -> ExtractedTable | None:
+    def _build_table(
+        self, table: Any, page_number: int, ordinal: int
+    ) -> ExtractedTable | None:
         try:
             raw_rows = table.extract()
         except Exception:  # skip a table we cannot read
@@ -200,7 +202,9 @@ class TableExtractor:
         return (x0, y0, x1, y1)
 
     @staticmethod
-    def _inside_any(line: TextLine, boxes: Sequence[tuple[float, float, float, float]]) -> bool:
+    def _inside_any(
+        line: TextLine, boxes: Sequence[tuple[float, float, float, float]]
+    ) -> bool:
         """Whether a line sits mostly within one of the table boxes.
 
         Removing these from the prose stream stops the same numbers being

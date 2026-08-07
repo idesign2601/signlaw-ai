@@ -169,14 +169,17 @@ final class SignLawClient
         ?int $year,
         UploadedFile $file,
     ): array {
+        // A plain associative array, not Guzzle's ['name' => …, 'contents' => …]
+        // form, and no asMultipart(): attach() already switches the request to
+        // multipart, and mixing the two produces a malformed body.
         $payload = [
-            ['name' => 'province', 'contents' => $province],
-            ['name' => 'municipality', 'contents' => $municipality],
-            ['name' => 'title', 'contents' => $title],
+            'province' => $province,
+            'municipality' => $municipality,
+            'title' => $title,
         ];
 
         if ($year !== null) {
-            $payload[] = ['name' => 'year', 'contents' => (string) $year];
+            $payload['year'] = (string) $year;
         }
 
         try {
@@ -185,7 +188,6 @@ final class SignLawClient
                 // bylaw over a domestic connection is not.
                 ->timeout($this->timeout)
                 ->attach('file', $file->get(), $file->getClientOriginalName())
-                ->asMultipart()
                 ->post($this->baseUrl.'/api/v1/admin/documents/upload', $payload);
         } catch (ConnectionException $exception) {
             Log::error('signlaw.upload.unreachable', ['error' => $exception->getMessage()]);

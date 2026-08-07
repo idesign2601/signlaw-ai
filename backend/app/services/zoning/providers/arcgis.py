@@ -86,7 +86,9 @@ class ArcGisZoningProvider:
 
         features = payload.get("features") or []
         if not features:
-            logger.info("zoning_no_match", provider=self.provider_name, address=request.address)
+            logger.info(
+                "zoning_no_match", provider=self.provider_name, address=request.address
+            )
             return None
 
         if len(features) > 1:

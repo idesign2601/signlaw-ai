@@ -23,14 +23,19 @@ class TestCatalogue:
         class of failure as the two Langleys, one level up.
         """
         slugs = [
-            municipality.slug for province in PROVINCES for municipality in province.municipalities
+            municipality.slug
+            for province in PROVINCES
+            for municipality in province.municipalities
         ]
         assert len(slugs) == len(set(slugs))
 
     def test_alberta_slugs_are_namespaced(self) -> None:
         alberta = find_province("AB")
         assert alberta is not None
-        assert all(municipality.slug.startswith("ab-") for municipality in alberta.municipalities)
+        assert all(
+            municipality.slug.startswith("ab-")
+            for municipality in alberta.municipalities
+        )
 
     def test_province_lookup_is_case_insensitive(self) -> None:
         assert find_province("bc") is not None

@@ -218,7 +218,9 @@ class ZoningService:
             map_url=row.map_url,
         )
 
-    async def _cached(self, municipality_id: uuid.UUID, address: str) -> Row[Any] | None:
+    async def _cached(
+        self, municipality_id: uuid.UUID, address: str
+    ) -> Row[Any] | None:
         return (
             await self.session.execute(
                 text(
@@ -236,7 +238,9 @@ class ZoningService:
             )
         ).first()
 
-    async def _cache(self, municipality_id: uuid.UUID, address: str, result: ZoningResult) -> None:
+    async def _cache(
+        self, municipality_id: uuid.UUID, address: str, result: ZoningResult
+    ) -> None:
         await self.session.execute(
             text(
                 "INSERT INTO parcel_zoning (id, municipality_id, address, "

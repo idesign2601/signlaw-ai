@@ -50,7 +50,9 @@ class TestCoverage:
         assert response.status_code == 200
 
         bc = _province(response.json(), "BC")
-        available = {item["slug"] for item in bc["municipalities"] if item["available"]}
+        available = {
+            item["slug"] for item in bc["municipalities"] if item["available"]
+        }
         assert available == {"vancouver", "burnaby", "surrey"}
 
     async def test_uningested_municipality_is_not_available(
@@ -68,7 +70,9 @@ class TestCoverage:
         assert coquitlam["available"] is False
         assert coquitlam["document_count"] == 0
 
-    async def test_both_langleys_appear_separately(self, coverage_client: AsyncClient) -> None:
+    async def test_both_langleys_appear_separately(
+        self, coverage_client: AsyncClient
+    ) -> None:
         """The whole point of the qualified slugs.
 
         A single "Langley" option would force the interface to pick a
