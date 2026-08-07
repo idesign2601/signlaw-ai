@@ -12,22 +12,29 @@ from __future__ import annotations
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI
+from fastapi import APIRouter, Depends, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.gzip import GZipMiddleware
 
 from app.api.errors import register_exception_handlers
 from app.api.middleware import RequestContextMiddleware
 from app.api.v1 import api_router
+from app.api.v1.admin import router as _admin_routes
 from app.api.v1.health import router as health_router
 from app.core.config import Settings, get_settings
 from app.core.logging import configure_logging, get_logger
+from app.core.security import require_admin
 from app.db.session import create_engine, create_session_factory, dispose_engine
 from app.rag.collections import CollectionSpec
 
 __all__ = ["app", "create_app"]
 
 logger = get_logger(__name__)
+
+# The admin guard is attached here rather than inside the module, so that the
+# router cannot be mounted unguarded by accident somewhere else.
+admin_router = APIRouter(dependencies=[Depends(require_admin)])
+admin_router.include_router(_admin_routes)
 
 DESCRIPTION = """
 Citation-first retrieval over British Columbia municipal sign bylaws.
@@ -135,6 +142,11 @@ def create_app(settings: Settings | None = None) -> FastAPI:
 
     app.include_router(health_router)
     app.include_router(api_router, prefix=settings.api_prefix)
+    # Mounted separately from api_router: admin routes are guarded by
+    # X-Admin-Key rather than the client X-API-Key. Requiring both would mean
+    # the admin tooling has to hold a key that lets it ask questions, which is
+    # not a permission it needs.
+    app.include_router(admin_router, prefix=settings.api_prefix)
 
     return app
 

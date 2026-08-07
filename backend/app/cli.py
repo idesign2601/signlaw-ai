@@ -188,6 +188,8 @@ async def _run_ingest(settings: Settings, paths: Sequence[str], force: bool, as_
                     "failed": [{"file": name, "error": error} for name, error in result.failed],
                     "chunks": result.chunks_written,
                     "collection": result.collection_name,
+                    "documents_resolved": result.documents_resolved,
+                    "in_force": result.in_force,
                 },
                 indent=2,
             )
@@ -203,7 +205,23 @@ async def _run_ingest(settings: Settings, paths: Sequence[str], force: bool, as_
 
     print()
     print(f"{result.chunks_written} chunks embedded into {CYAN(result.collection_name)}")
-    if result.processed:
+    # Reported because it is the number that decides whether anything can be
+    # retrieved at all. Chunk counts look healthy even when nothing is in force.
+    print(f"{result.in_force} of {result.documents_resolved} document(s) in force")
+
+    if result.documents_resolved and not result.in_force:
+        print()
+        print(
+            RED("Nothing is in force, so no question can be answered.")
+            + " Every document resolved to superseded, repealed or unknown —"
+        )
+        print(
+            DIM(
+                "  usually because the municipality or bylaw number was not "
+                "detected. Check the filenames carry the city."
+            )
+        )
+    elif result.processed:
         print(DIM('Try: signlaw ask "What is the maximum fascia sign area?"'))
 
     return 0 if result.succeeded else 1

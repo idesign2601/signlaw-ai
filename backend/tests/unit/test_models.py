@@ -37,6 +37,9 @@ EXPECTED_TABLES = {
     # Jurisdiction (Phase 2b added province above municipality)
     "province",
     "municipality",
+    # Zoning lookup cache. Entirely derived from municipal open data — the
+    # city's service is authoritative and this only avoids re-querying it.
+    "parcel_zoning",
     # Documents and their content
     "document",
     "bylaw_relation",

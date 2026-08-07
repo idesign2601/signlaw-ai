@@ -28,17 +28,55 @@ so the interface cannot advertise something the corpus cannot answer.
 **The API key never reaches the browser.** Calls are server-to-server, which is
 also why there is no CORS configuration and no mixed-content problem.
 
+## Pages
+
+| Route | What it is |
+|---|---|
+| `/` | Landing page |
+| `/ask` | The question interface |
+| `/zoning-check` | Placeholder. Renders text, calls nothing. |
+| `/admin/login` | Single-password sign-in, throttled to six attempts a minute |
+| `/admin` | Document dashboard — municipality, filename, pages, chunks, status, date |
+| `/admin/upload` | Upload a bylaw PDF for indexing |
+
+## Admin authentication
+
+A single shared password in `ADMIN_PASSWORD`, checked in constant time and
+remembered in the session. No users table, no registration, no password reset —
+this application has no database of its own, and adding one to authenticate a
+single operator would be the larger risk.
+
+**That gate is convenience, not the real control.** The backend requires
+`X-Admin-Key` on every admin route, and this application is the only thing that
+holds it. A forged session here still cannot reach the API.
+
+Unset `ADMIN_PASSWORD` disables admin sign-in entirely. That is the deliberate
+default: a deployment nobody has configured should not have a working back door.
+
 ## Files
 
 These are the application-specific files. They overlay a stock Laravel skeleton.
 
 ```
 frontend/
-├── app/Http/Controllers/AskController.php   the only controller
-├── app/Services/SignLawClient.php           the only coupling to FastAPI
-├── config/signlaw.php                       API URL, key, timeout, cache
-├── routes/web.php                           GET / and POST /
-└── resources/views/ask/index.blade.php      the whole page
+├── app/Http/Controllers/
+│   ├── AdminController.php                sign-in, dashboard, upload
+│   ├── AskController.php                  question form and answer
+│   └── PageController.php                 landing and the placeholder
+├── app/Http/Middleware/RequireAdmin.php   session gate
+├── app/Services/SignLawClient.php         the only coupling to FastAPI
+├── config/signlaw.php                     API URL, keys, timeout, cache
+├── routes/web.php
+└── resources/views/
+    ├── layouts/app.blade.php              shell, nav, footer, disclaimer
+    ├── partials/coverage.blade.php        shared by landing and /ask
+    ├── landing.blade.php
+    ├── ask.blade.php
+    ├── zoning-check.blade.php
+    └── admin/
+        ├── login.blade.php
+        ├── dashboard.blade.php
+        └── upload.blade.php
 ```
 
 ## Setup
@@ -61,6 +99,7 @@ $this->app->singleton(\App\Services\SignLawClient::class, fn () => new \App\Serv
     config('signlaw.timeout'),
     config('signlaw.coverage_cache_seconds'),
     config('signlaw.api_key'),
+    config('signlaw.admin_key'),
 ));
 ```
 
@@ -70,9 +109,15 @@ Then configure and run:
 cat >> .env <<'EOF'
 SIGNLAW_API_URL=http://localhost:8000
 SIGNLAW_API_KEY=
+SIGNLAW_ADMIN_KEY=
+ADMIN_PASSWORD=
 EOF
 php artisan serve --port=8080
 ```
+
+Uploads are limited to 50 MB by the form. PHP itself caps them lower by default
+— raise `upload_max_filesize` and `post_max_size` in `php.ini` (or your host's
+panel) or large scanned bylaws will fail before Laravel ever sees them.
 
 Leave `SIGNLAW_API_KEY` empty against a local backend: with
 `ENVIRONMENT=local` and no `SECURITY__API_KEYS`, the backend allows

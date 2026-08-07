@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Services;
 
 use Illuminate\Http\Client\ConnectionException;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use RuntimeException;
@@ -32,6 +33,7 @@ final class SignLawClient
         private readonly int $timeout,
         private readonly int $coverageCacheSeconds,
         private readonly ?string $apiKey = null,
+        private readonly ?string $adminKey = null,
     ) {
     }
 
@@ -119,6 +121,227 @@ final class SignLawClient
         }
 
         return $response->json();
+    }
+
+    /**
+     * Every indexed document, plus uploads still processing.
+     *
+     * Not cached: an operator watching an upload index needs the current state,
+     * and a stale dashboard would look like a stalled ingest.
+     *
+     * @return array{documents: array<int, array<string, mixed>>, pending: array<int, array<string, mixed>>, total: int}
+     */
+    public function documents(): array
+    {
+        $response = Http::withHeaders($this->adminHeaders())
+            ->timeout($this->timeout)
+            ->acceptJson()
+            ->get($this->baseUrl.'/api/v1/admin/documents');
+
+        if ($response->status() === 401 || $response->status() === 403) {
+            throw new RuntimeException(
+                'The backend rejected the admin key. Check SIGNLAW_ADMIN_KEY.',
+            );
+        }
+
+        if ($response->failed()) {
+            Log::error('signlaw.documents.failed', ['status' => $response->status()]);
+
+            throw new RuntimeException('Could not load documents from the backend.');
+        }
+
+        return $response->json();
+    }
+
+    /**
+     * Upload a bylaw PDF for indexing.
+     *
+     * Returns as soon as the backend accepts it. Extraction, OCR, chunking and
+     * embedding continue in the background — a large scanned bylaw takes
+     * minutes, and the dashboard is where that is watched.
+     *
+     * @return array<string, mixed>
+     */
+    public function uploadDocument(
+        string $province,
+        string $municipality,
+        string $title,
+        ?int $year,
+        UploadedFile $file,
+    ): array {
+        $payload = [
+            ['name' => 'province', 'contents' => $province],
+            ['name' => 'municipality', 'contents' => $municipality],
+            ['name' => 'title', 'contents' => $title],
+        ];
+
+        if ($year !== null) {
+            $payload[] = ['name' => 'year', 'contents' => (string) $year];
+        }
+
+        try {
+            $response = Http::withHeaders($this->adminHeaders())
+                // Generous: the upload itself is quick, but a 50 MB scanned
+                // bylaw over a domestic connection is not.
+                ->timeout($this->timeout)
+                ->attach('file', $file->get(), $file->getClientOriginalName())
+                ->asMultipart()
+                ->post($this->baseUrl.'/api/v1/admin/documents/upload', $payload);
+        } catch (ConnectionException $exception) {
+            Log::error('signlaw.upload.unreachable', ['error' => $exception->getMessage()]);
+
+            throw new RuntimeException('The backend is unreachable. Try again shortly.');
+        }
+
+        if ($response->status() === 401 || $response->status() === 403) {
+            throw new RuntimeException(
+                'The backend rejected the admin key. Check SIGNLAW_ADMIN_KEY.',
+            );
+        }
+
+        // 400 and 413 carry a message written for the operator — the file is
+        // not a PDF, the municipality is unknown, the file is too large.
+        if (in_array($response->status(), [400, 413], strict: true)) {
+            throw new RuntimeException(
+                $response->json('detail') ?? 'The backend rejected the upload.',
+            );
+        }
+
+        if ($response->failed()) {
+            Log::error('signlaw.upload.failed', [
+                'status' => $response->status(),
+                'body' => $response->body(),
+            ]);
+
+            throw new RuntimeException('The upload could not be processed.');
+        }
+
+        return $response->json();
+    }
+
+    /**
+     * A municipality's zoning provider configuration.
+     *
+     * @return array<string, mixed>
+     */
+    public function zoningConfig(string $slug): array
+    {
+        $response = Http::withHeaders($this->adminHeaders())
+            ->timeout($this->timeout)
+            ->acceptJson()
+            ->get($this->baseUrl."/api/v1/admin/municipalities/{$slug}/zoning");
+
+        if ($response->status() === 404) {
+            throw new RuntimeException(
+                'No municipality record yet. Ingest a bylaw for this city first.',
+            );
+        }
+
+        if ($response->failed()) {
+            throw new RuntimeException('Could not load the zoning configuration.');
+        }
+
+        return $response->json();
+    }
+
+    /**
+     * @param  array<string, mixed>  $config
+     * @return array<string, mixed>
+     */
+    public function saveZoningConfig(string $slug, array $payload): array
+    {
+        $response = Http::withHeaders($this->adminHeaders())
+            ->timeout($this->timeout)
+            ->acceptJson()
+            ->put($this->baseUrl."/api/v1/admin/municipalities/{$slug}/zoning", $payload);
+
+        if ($response->status() === 400) {
+            throw new RuntimeException(
+                $response->json('detail') ?? 'The configuration was rejected.',
+            );
+        }
+
+        if ($response->failed()) {
+            Log::error('signlaw.zoning_config.failed', ['status' => $response->status()]);
+
+            throw new RuntimeException('Could not save the zoning configuration.');
+        }
+
+        return $response->json();
+    }
+
+    /**
+     * Resolve an address to its zoning district.
+     *
+     * @return array<string, mixed>
+     */
+    public function zoningLookup(string $address, ?string $municipality = null): array
+    {
+        $payload = ['address' => $address];
+        if ($municipality !== null && $municipality !== '') {
+            $payload['municipality'] = $municipality;
+        }
+
+        return $this->post('/api/v1/zoning/lookup', $payload);
+    }
+
+    /**
+     * Check a proposed sign against the bylaw.
+     *
+     * @param  array<string, mixed>  $spec
+     * @return array<string, mixed>
+     */
+    public function complianceCheck(array $spec): array
+    {
+        return $this->post('/api/v1/compliance/check', $spec);
+    }
+
+    /**
+     * @param  array<string, mixed>  $payload
+     * @return array<string, mixed>
+     */
+    private function post(string $path, array $payload): array
+    {
+        try {
+            $response = Http::withHeaders($this->headers())
+                ->timeout($this->timeout)
+                ->acceptJson()
+                ->post($this->baseUrl.$path, $payload);
+        } catch (ConnectionException $exception) {
+            Log::error('signlaw.post.unreachable', [
+                'path' => $path,
+                'error' => $exception->getMessage(),
+            ]);
+
+            throw new RuntimeException('The service is unreachable. Try again shortly.');
+        }
+
+        if (in_array($response->status(), [400, 404], strict: true)) {
+            throw new RuntimeException(
+                $response->json('detail') ?? 'That request could not be processed.',
+            );
+        }
+
+        if ($response->failed()) {
+            Log::error('signlaw.post.failed', [
+                'path' => $path,
+                'status' => $response->status(),
+            ]);
+
+            throw new RuntimeException('That request could not be processed.');
+        }
+
+        return $response->json();
+    }
+
+    /**
+     * @return array<string, string>
+     */
+    private function adminHeaders(): array
+    {
+        return $this->adminKey === null || $this->adminKey === ''
+            ? []
+            : ['X-Admin-Key' => $this->adminKey];
     }
 
     /**

@@ -217,6 +217,9 @@ class HealthService:
                     )
                 ).first()
                 documents = await connection.scalar(text("SELECT count(*) FROM document"))
+                in_force = await connection.scalar(
+                    text("SELECT count(*) FROM document WHERE status = 'in_force'")
+                )
         except Exception as exc:
             return ComponentCheck("corpus", ComponentStatus.UNAVAILABLE, str(exc))
 
@@ -236,10 +239,33 @@ class HealthService:
                 remediation="signlaw ingest <path-to-pdf>",
             )
 
+        if documents and not in_force:
+            # The silent failure this check exists to catch. Chunks are indexed
+            # and embedded, and retrieval filters on status = 'in_force', so
+            # every question returns nothing — reported downstream as "found
+            # only superseded or repealed text", which reads like a corpus
+            # problem rather than a broken pipeline.
+            return ComponentCheck(
+                "corpus",
+                ComponentStatus.DEGRADED,
+                (
+                    f"{documents} document(s) indexed but none are in force; "
+                    "retrieval will return nothing"
+                ),
+                remediation=(
+                    "the lineage pass could not establish currency — check that "
+                    "municipality and bylaw number were detected, then re-run "
+                    "`signlaw ingest <path> --force`"
+                ),
+            )
+
         return ComponentCheck(
             "corpus",
             ComponentStatus.OK,
-            f"{documents} document(s), {row.chunk_count} chunks in '{row.name}'",
+            (
+                f"{documents} document(s), {in_force} in force, "
+                f"{row.chunk_count} chunks in '{row.name}'"
+            ),
         )
 
     # -- models --------------------------------------------------------------

@@ -28,9 +28,16 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.adapters.embeddings.base import EmbeddingProviderProtocol
 from app.core.config import Settings
 from app.core.logging import get_logger
-from app.db.enums import CollectionStatus, ProcessingStage
+from app.db.enums import CollectionStatus, DocType, DocumentStatus, ProcessingStage
 from app.domain.models import TextChunk
 from app.domain.municipalities import MunicipalityRegistry
+from app.domain.provinces import find_municipality
+from app.ingestion.amendments import (
+    DocumentFacts,
+    LineageResolver,
+    RelationEdge,
+    ResolvedDocument,
+)
 from app.ingestion.pipeline import DocumentOutcome, DocumentPipeline, PipelineConfig
 from app.rag.collections import CollectionSpec
 
@@ -49,6 +56,10 @@ class IngestResult:
     chunks_written: int = 0
     chunks_embedded: int = 0
     collection_name: str = ""
+    # Documents whose in-force status was resolved. Zero here means nothing is
+    # retrievable, whatever the chunk counts say.
+    documents_resolved: int = 0
+    in_force: int = 0
 
     @property
     def total(self) -> int:
@@ -107,7 +118,147 @@ class IngestionService:
             result.chunks_embedded += written
 
         await self._refresh_collection_count(collection_id)
+
+        # Currency is a property of the corpus, so this runs over every
+        # document, not only the ones just ingested: adding one consolidation
+        # can supersede documents that were already indexed.
+        #
+        # Without this step every document stays UNKNOWN, and retrieval — which
+        # filters on `status = 'in_force'` — returns nothing at all. The system
+        # then reports "found only superseded or repealed text" for every
+        # question, which is plausible enough to be mistaken for a corpus
+        # problem rather than a missing pass.
+        resolved = await self.resolve_lineage()
+        result.documents_resolved = len(resolved)
+        result.in_force = sum(
+            1 for document in resolved if document.status is DocumentStatus.IN_FORCE
+        )
+
+        if resolved and not result.in_force:
+            # Chunks exist, embeddings exist, and not one of them can be
+            # retrieved. Worth shouting about: the failure is otherwise silent
+            # and reads downstream as "the bylaw does not address this".
+            logger.error(
+                "no_documents_in_force",
+                documents=len(resolved),
+                detail=(
+                    "Every document resolved to superseded, repealed or unknown, "
+                    "so retrieval will return nothing. Check that bylaw numbers "
+                    "and municipalities were detected."
+                ),
+            )
+
         return result
+
+    # -- lineage -------------------------------------------------------------
+
+    async def resolve_lineage(self) -> list[ResolvedDocument]:
+        """Decide which documents are currently the law, corpus-wide.
+
+        Answering this per document is impossible: "in force" is a claim about
+        one document's relationship to every other. So the whole corpus is
+        loaded, resolved together, and written back.
+        """
+        facts = await self._load_facts()
+        if not facts:
+            return []
+
+        resolver = LineageResolver(facts=facts)
+        resolved = resolver.resolve()
+
+        await self._write_statuses(resolved)
+        await self._write_edges(resolver.build_edges())
+        await self.session.commit()
+
+        return resolved
+
+    async def _load_facts(self) -> list[DocumentFacts]:
+        result = await self.session.execute(
+            text(
+                "SELECT d.id, d.bylaw_number, d.doc_type, d.consolidation_date, "
+                "       d.effective_date, d.year, d.amends_bylaw_numbers, "
+                "       m.canonical_slug "
+                "FROM document d "
+                "LEFT JOIN municipality m ON m.id = d.municipality_id"
+            )
+        )
+
+        return [
+            DocumentFacts(
+                document_id=str(row.id),
+                municipality_slug=row.canonical_slug,
+                bylaw_number=row.bylaw_number,
+                doc_type=DocType(row.doc_type),
+                consolidation_date=row.consolidation_date,
+                effective_date=row.effective_date,
+                year=row.year,
+                amends_bylaw_numbers=tuple(row.amends_bylaw_numbers or ()),
+            )
+            for row in result
+        ]
+
+    async def _write_statuses(self, resolved: Sequence[ResolvedDocument]) -> None:
+        """Write each verdict back, leaving human corrections alone.
+
+        ``verified_by_human`` exists precisely so an operator who has checked a
+        document against the municipality's register is not overruled by a
+        later automated pass working from thinner evidence.
+        """
+        for document in resolved:
+            await self.session.execute(
+                text(
+                    "UPDATE document SET "
+                    " status = CAST(:status AS document_status), "
+                    " last_amendment_date = COALESCE(:amended, last_amendment_date), "
+                    " notes = :reason "
+                    "WHERE id = CAST(:id AS uuid) AND verified_by_human = false"
+                ),
+                {
+                    "id": document.document_id,
+                    "status": document.status.value,
+                    "amended": document.last_amendment_date,
+                    "reason": document.reason,
+                },
+            )
+
+            if document.needs_review:
+                logger.warning(
+                    "lineage_needs_review",
+                    document_id=document.document_id,
+                    reason=document.reason,
+                )
+
+    async def _write_edges(self, edges: Sequence[RelationEdge]) -> None:
+        """Replace the detected lineage graph.
+
+        Deleted and rebuilt rather than upserted: an edge that a previous run
+        inferred may be *wrong* once more documents exist, and leaving stale
+        edges behind would make the graph grow monotonically regardless of
+        evidence.
+        """
+        await self.session.execute(text("DELETE FROM bylaw_relation"))
+
+        for edge in edges:
+            await self.session.execute(
+                text(
+                    "INSERT INTO bylaw_relation (id, parent_document_id, "
+                    " child_document_id, relation_type, detected_by, confidence, "
+                    " evidence) "
+                    "VALUES (:id, CAST(:parent AS uuid), CAST(:child AS uuid), "
+                    " CAST(:relation AS relation_type), :detected_by, :confidence, "
+                    " :evidence) "
+                    "ON CONFLICT ON CONSTRAINT uq_bylaw_relation_edge DO NOTHING"
+                ),
+                {
+                    "id": uuid.uuid4(),
+                    "parent": edge.parent_document_id,
+                    "child": edge.child_document_id,
+                    "relation": edge.relation_type.value,
+                    "detected_by": edge.detected_by,
+                    "confidence": edge.confidence,
+                    "evidence": edge.evidence,
+                },
+            )
 
     # -- one document --------------------------------------------------------
 
@@ -184,13 +335,14 @@ class IngestionService:
                 " sha256, size_bytes, title, bylaw_number, year, consolidation_date, "
                 " doc_type, status, page_count, is_scanned, ocr_applied, "
                 " text_quality_score, metadata_source, metadata_confidence, "
-                " processing_stage, stage_updated_at) "
+                " amends_bylaw_numbers, processing_stage, stage_updated_at) "
                 "VALUES (:id, :municipality_id, :filename, :source_path, :sha256, "
                 " :size_bytes, :title, :bylaw_number, :year, :consolidation_date, "
                 " CAST(:doc_type AS doc_type), CAST(:status AS document_status), "
                 " :page_count, :is_scanned, :ocr_applied, :quality, "
                 " CAST(NULLIF(:metadata_source, '') AS metadata_source), "
-                " :metadata_confidence, CAST(:stage AS processing_stage), :now)"
+                " :metadata_confidence, CAST(:amends AS text[]), "
+                " CAST(:stage AS processing_stage), :now)"
             ),
             {
                 "id": document_id,
@@ -214,6 +366,9 @@ class IngestionService:
                 "quality": round(outcome.mean_extraction_confidence, 3),
                 "metadata_source": (metadata.source.value if metadata.source else ""),
                 "metadata_confidence": metadata.confidence,
+                # Kept as printed. The lineage pass turns these into edges once
+                # the referenced documents exist, which may be a later run.
+                "amends": list(metadata.amends_bylaw_numbers),
                 "stage": ProcessingStage.CHUNKED.value,
                 "now": datetime.now(UTC),
             },
@@ -241,7 +396,18 @@ class IngestionService:
         if record is None:
             return None
 
-        province_id = await self.session.scalar(text("SELECT id FROM province WHERE code = 'BC'"))
+        # The province comes from the catalogue, not a constant. Hardcoding 'BC'
+        # here filed every Alberta document under British Columbia — silently,
+        # because nothing downstream reads the province except coverage.
+        province_id = await self._province_for(slug)
+        if province_id is None:
+            logger.warning(
+                "municipality_province_missing",
+                municipality=slug,
+                detail="no province row; the document will not be filterable by city",
+            )
+            return None
+
         municipality_id = uuid.uuid4()
 
         await self.session.execute(
@@ -262,6 +428,42 @@ class IngestionService:
             },
         )
         return municipality_id
+
+    async def _province_for(self, municipality_slug: str) -> uuid.UUID | None:
+        """Find the province a municipality belongs to, creating the row if new.
+
+        A province absent from the database is a first ingest for that province,
+        not an error — the catalogue is the source of truth for which provinces
+        exist, and the table merely records the ones seen so far.
+        """
+        found = find_municipality(municipality_slug)
+        if found is None:
+            return None
+
+        province, _ = found
+
+        existing = await self.session.scalar(
+            text("SELECT id FROM province WHERE code = :code"), {"code": province.code}
+        )
+        if existing is not None:
+            return uuid.UUID(str(existing))
+
+        province_id = uuid.uuid4()
+        await self.session.execute(
+            text(
+                "INSERT INTO province (id, name, code, country_code) "
+                "VALUES (:id, :name, :code, 'CA') "
+                "ON CONFLICT (code) DO NOTHING"
+            ),
+            {"id": province_id, "name": province.name, "code": province.code},
+        )
+        logger.info("province_created", code=province.code, name=province.name)
+
+        # Re-read: a concurrent ingest may have won the insert.
+        resolved = await self.session.scalar(
+            text("SELECT id FROM province WHERE code = :code"), {"code": province.code}
+        )
+        return uuid.UUID(str(resolved)) if resolved else None
 
     async def _write_pages(self, document_id: uuid.UUID, outcome: DocumentOutcome) -> None:
         for page in outcome.pages:

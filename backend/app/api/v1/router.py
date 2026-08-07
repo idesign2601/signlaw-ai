@@ -15,6 +15,7 @@ from fastapi import APIRouter, Depends
 
 from app.api.v1.ask import router as ask_router
 from app.api.v1.municipalities import router as municipalities_router
+from app.api.v1.phase3 import router as phase3_router
 from app.core.security import require_api_key
 
 __all__ = ["api_router"]
@@ -22,3 +23,4 @@ __all__ = ["api_router"]
 api_router = APIRouter(dependencies=[Depends(require_api_key)])
 api_router.include_router(municipalities_router)
 api_router.include_router(ask_router)
+api_router.include_router(phase3_router)

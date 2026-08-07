@@ -182,6 +182,17 @@ class LLMSettings(BaseModel):
     request_timeout_s: float = Field(default=120.0, gt=0)
     max_retries: int = Field(default=3, ge=0, le=10)
 
+    # Context window. Five retrieved sections plus instructions overflow the
+    # 2048 tokens most Ollama models default to, which silently truncates the
+    # evidence — so it is set explicitly.
+    #
+    # Also the main VRAM lever after model size: the KV cache grows linearly
+    # with this, so a 12 GB card running a 14B model may need it lowered to fit
+    # alongside the embedding and reranking models. Lowering it too far
+    # truncates evidence instead, which costs citation accuracy rather than
+    # failing loudly — so change it deliberately and re-run the evaluation.
+    num_ctx: int = Field(default=16384, ge=2048, le=131072)
+
     ollama_base_url: str = "http://localhost:11434"
 
     openai_api_key: SecretStr | None = None

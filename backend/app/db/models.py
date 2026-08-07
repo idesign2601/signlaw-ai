@@ -140,14 +140,92 @@ class Municipality(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     contact_email: Mapped[str | None] = mapped_column(String(255))
     contact_phone: Mapped[str | None] = mapped_column(String(50))
 
+    # --- zoning lookup configuration -------------------------------------
+    # The kind of service this city publishes — arcgis, opendatasoft, socrata.
+    # A kind is a query grammar and is code; a city is a vocabulary and is data,
+    # which is what makes adding a municipality a row rather than a module.
+    gis_provider: Mapped[str | None] = mapped_column(String(60))
+    gis_endpoint: Mapped[str | None] = mapped_column(String(1000))
+    # Dataset identifiers and field names: which attribute holds the zone,
+    # which holds the address.
+    gis_config: Mapped[dict[str, Any]] = mapped_column(
+        JSONB, nullable=False, server_default=text("'{}'::jsonb")
+    )
+    # Whether the configuration has been checked against the city's own service
+    # directory. The provider is never built until this is true: a layer
+    # carrying a similar-looking field returns a confidently wrong zone, and
+    # the service responds happily either way.
+    gis_verified: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, server_default=text("false")
+    )
+    # The city's public map. Shown with every zoning answer, because an
+    # automated result a person cannot verify is worth little.
+    map_url: Mapped[str | None] = mapped_column(String(1000))
+
     province: Mapped[Province | None] = relationship(back_populates="municipalities")
     documents: Mapped[list[Document]] = relationship(
+        back_populates="municipality", cascade="all, delete-orphan", passive_deletes=True
+    )
+    parcels: Mapped[list[ParcelZoning]] = relationship(
         back_populates="municipality", cascade="all, delete-orphan", passive_deletes=True
     )
 
     __table_args__ = (
         Index("ix_municipality_name", "name"),
         UniqueConstraint("province_id", "name", name="uq_municipality_province_name"),
+    )
+
+
+class ParcelZoning(UUIDPrimaryKeyMixin, TimestampMixin, Base):
+    """A cached zoning lookup for one parcel.
+
+    Entirely a cache: the municipality's open data is authoritative, and this
+    exists so a repeated question does not re-query it. Cached zoning goes
+    stale — a rezoning changes the answer — so every row carries when it was
+    fetched and when it stops being trusted, and the interface states the
+    as-at date rather than presenting it as current fact.
+
+    ``geometry_reference`` is JSONB rather than a geometry column. Nothing here
+    needs spatial arithmetic; a parcel's zone is looked up by address, not by
+    intersecting polygons. Storing the provider's own handle keeps PostGIS
+    available later without requiring the extension now.
+    """
+
+    __tablename__ = "parcel_zoning"
+
+    municipality_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("municipality.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+
+    # As typed, for display.
+    address: Mapped[str] = mapped_column(String(500), nullable=False)
+    # Casefolded and punctuation-stripped, for the cache key. Two spellings of
+    # one address must not produce two lookups and two answers.
+    normalized_address: Mapped[str] = mapped_column(String(500), nullable=False)
+
+    parcel_number: Mapped[str | None] = mapped_column(String(80), index=True)
+    legal_description: Mapped[str | None] = mapped_column(Text)
+    zoning_code: Mapped[str | None] = mapped_column(String(40))
+    zoning_description: Mapped[str | None] = mapped_column(String(500))
+    geometry_reference: Mapped[dict[str, Any] | None] = mapped_column(JSONB)
+
+    source_url: Mapped[str | None] = mapped_column(String(1000))
+    provider: Mapped[str] = mapped_column(String(60), nullable=False)
+    # 1.0 for an exact parcel match; lower for anything geocoded or inferred.
+    confidence: Mapped[float] = mapped_column(Float, nullable=False, server_default=text("0.0"))
+
+    fetched_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    expires_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), index=True)
+
+    municipality: Mapped[Municipality] = relationship(back_populates="parcels")
+
+    __table_args__ = (
+        UniqueConstraint(
+            "municipality_id",
+            "normalized_address",
+            name="uq_parcel_zoning_municipality_address",
+        ),
+        CheckConstraint("confidence >= 0 AND confidence <= 1", name="confidence_range"),
     )
 
 
@@ -185,6 +263,13 @@ class Document(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     # from consolidation_date: a consolidation may post-date the amendment it
     # incorporates, and a citation must be able to state both.
     last_amendment_date: Mapped[date | None] = mapped_column(Date)
+    # Bylaw numbers this document amends, as printed in its own text. Resolved
+    # into bylaw_relation edges by the lineage pass once the whole corpus is
+    # known — a reference cannot become an edge until the referenced document
+    # has itself been ingested.
+    amends_bylaw_numbers: Mapped[list[str]] = mapped_column(
+        ARRAY(Text), nullable=False, server_default=text("'{}'::text[]")
+    )
 
     doc_type: Mapped[DocType] = mapped_column(
         _pg_enum(DocType, "doc_type"), nullable=False, server_default=DocType.UNKNOWN.value

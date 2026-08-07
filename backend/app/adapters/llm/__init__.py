@@ -36,6 +36,7 @@ def build_llm_provider(settings: LLMSettings) -> LLMProviderProtocol:
             max_tokens=settings.max_tokens,
             timeout_s=settings.request_timeout_s,
             max_retries=settings.max_retries,
+            num_ctx=settings.num_ctx,
         )
 
     raise ConfigurationError(

@@ -11,11 +11,10 @@ use Illuminate\View\View;
 use RuntimeException;
 
 /**
- * The one page.
+ * The question interface.
  *
- * Everything the user does happens here: pick a jurisdiction, ask, read the
- * answer and its citations. No JSON endpoints, no SPA — a form post and a
- * server-rendered response.
+ * A form post and a server-rendered response. No JSON endpoints, no SPA — the
+ * answer arrives with the page rather than being fetched into it.
  */
 final class AskController extends Controller
 {
@@ -25,7 +24,7 @@ final class AskController extends Controller
 
     public function index(): View
     {
-        return view('ask.index', [
+        return view('ask', [
             'coverage' => $this->client->coverage(),
             'result' => null,
             'error' => null,
@@ -38,10 +37,10 @@ final class AskController extends Controller
 
         $validated = $request->validate([
             'question' => ['required', 'string', 'min:3', 'max:2000'],
-            // Validated against what the backend actually reports as available,
-            // not a list maintained here. A municipality that stops being
-            // available — because its only bylaw was marked repealed — stops
-            // being selectable without any change to this file.
+            // Validated against what the backend reports as available, not a
+            // list maintained here. A municipality that stops being available
+            // — because its only bylaw was marked repealed — stops being
+            // selectable without any change to this file.
             'municipality' => [
                 'nullable',
                 'string',
@@ -62,7 +61,7 @@ final class AskController extends Controller
             $error = $exception->getMessage();
         }
 
-        return view('ask.index', [
+        return view('ask', [
             'coverage' => $coverage,
             'result' => $result,
             'error' => $error,
