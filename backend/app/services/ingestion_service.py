@@ -649,6 +649,13 @@ class IngestionService:
         batch_size = self.settings.embedding.batch_size
         table = spec.table_name
         written = 0
+        total = len(chunks)
+
+        # Embedding is the longest step by far — minutes on CPU for a large
+        # bylaw — and it committed nothing until the end, so an operator
+        # watching the dashboard saw "processing" with no way to tell progress
+        # from a hang. Logged per batch so the two are distinguishable.
+        logger.info("embedding_started", chunks=total, batch_size=batch_size)
 
         for start in range(0, len(chunks), batch_size):
             batch = chunks[start : start + batch_size]
@@ -675,6 +682,13 @@ class IngestionService:
                     },
                 )
                 written += 1
+
+            logger.info(
+                "embedding_progress",
+                embedded=written,
+                total=total,
+                percent=round(100 * written / total),
+            )
 
         return written
 
