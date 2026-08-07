@@ -20,6 +20,11 @@
         }
     }
 
+    // A municipality is selectable only once a bylaw is indexed for it. Before
+    // the first ingest that is every municipality, which would render two empty
+    // dropdowns and no explanation — so the empty case gets its own panel.
+    $hasCoverage = $selectable !== [];
+
     $bandStyles = [
         'high' => 'bg-emerald-50 text-emerald-800 ring-emerald-200',
         'medium' => 'bg-amber-50 text-amber-800 ring-amber-200',
@@ -35,8 +40,32 @@
         Answers come only from indexed bylaw text, with the section and page they rest on.
     </p>
 
+    {{-- Nothing indexed yet ---------------------------------------------- --}}
+    @if (! $hasCoverage)
+        <section class="mt-8 rounded-xl border border-dashed border-slate-300 p-8 text-center">
+            <p class="text-sm font-medium">No bylaws are indexed yet</p>
+            <p class="mx-auto mt-2 max-w-md text-sm leading-relaxed text-slate-600">
+                @if ($provinces)
+                    Municipalities are catalogued, but none has an in-force bylaw indexed,
+                    so there is nothing to answer from. Upload a bylaw PDF to make a
+                    municipality answerable.
+                @else
+                    The answering service could not be reached, so coverage is unknown.
+                    Questions cannot be asked until it is available.
+                @endif
+            </p>
+            <a href="{{ route('admin.dashboard') }}"
+               class="mt-5 inline-block rounded-lg bg-slate-900 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-slate-700">
+                Go to admin
+            </a>
+        </section>
+    @endif
+
     {{-- Question form ----------------------------------------------------- --}}
-    <section class="mt-8 rounded-xl border border-slate-200 p-6">
+    <section @class([
+        'mt-8 rounded-xl border border-slate-200 p-6',
+        'hidden' => ! $hasCoverage,
+    ])>
         <form method="POST" action="{{ route('ask.submit') }}" id="ask-form">
             @csrf
 
