@@ -272,20 +272,45 @@ class TestApiKeyEnforcement:
 
 
 class TestInfrastructureFailures:
-    @pytest.mark.parametrize(
-        "outcome",
-        [AnswerOutcome.GENERATION_UNAVAILABLE, AnswerOutcome.INDEX_NOT_READY],
-    )
-    async def test_infrastructure_failure_is_5xx(
-        self, app: FastAPI, client: AsyncClient, outcome: AnswerOutcome
-    ) -> None:
-        """Our fault, not a limit of the corpus.
-
-        A caller should retry, and must not tell the user the bylaw is silent.
-        """
-        _install(app, AnswerResult(outcome=outcome, answer="Unavailable."))
+    async def test_no_index_is_5xx(self, app: FastAPI, client: AsyncClient) -> None:
+        """Nothing to search and nothing to return. A caller should retry."""
+        _install(
+            app,
+            AnswerResult(outcome=AnswerOutcome.INDEX_NOT_READY, answer="Nothing indexed."),
+        )
 
         response = await client.post(
             "/api/v1/ask", json={"question": "Are channel letters allowed?"}
         )
         assert response.status_code == 503
+
+    async def test_generation_down_still_returns_the_sections(
+        self, app: FastAPI, client: AsyncClient
+    ) -> None:
+        """Degraded, not useless.
+
+        Retrieval worked; only generation failed. The retrieved sections are the
+        one part still worth reading, and the message tells the user they are
+        listed below — so raising a 503 and discarding them would make the
+        response contradict itself.
+        """
+        answered = _answered()
+        _install(
+            app,
+            AnswerResult(
+                outcome=AnswerOutcome.GENERATION_UNAVAILABLE,
+                answer="The model is unavailable. The retrieved sections are below.",
+                citations=answered.citations,
+            ),
+        )
+
+        response = await client.post(
+            "/api/v1/ask", json={"question": "Are channel letters allowed?"}
+        )
+
+        assert response.status_code == 200
+        payload = response.json()
+        assert payload["outcome"] == "generation_unavailable"
+        assert payload["answered"] is False
+        assert len(payload["citations"]) == 1
+        assert payload["citations"][0]["section"] == "4.2.1"

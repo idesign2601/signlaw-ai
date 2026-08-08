@@ -47,7 +47,12 @@ router = APIRouter(tags=["ask"])
     responses={
         status.HTTP_404_NOT_FOUND: {"description": "Unknown municipality slug."},
         status.HTTP_503_SERVICE_UNAVAILABLE: {
-            "description": "No index built, or the language model is unreachable."
+            "description": (
+                "No index has been built, so there is nothing to search. A "
+                "language model failure is **not** a 503: retrieval still "
+                "succeeded, so the response carries the sections that were "
+                "found with `outcome: generation_unavailable`."
+            )
         },
     },
 )
@@ -71,9 +76,12 @@ async def ask(payload: AskRequest, service: RagServiceDep) -> AskResponse:
 
     result = await service.answer(payload.question, filters=filters, top_n=payload.top_n)
 
-    if result.outcome.is_infrastructure_failure:
-        # Distinguished from an abstention: this is our fault, and a caller
-        # should retry rather than tell the user the bylaw is silent.
+    # Only a genuinely empty failure becomes a 503. When generation is down but
+    # retrieval succeeded, the response carries the sections that were found —
+    # degraded, not useless — and throwing that away to raise an error would
+    # discard the one part still worth reading. The message says the sections
+    # are listed below, so they have to actually be listed.
+    if result.outcome is AnswerOutcome.INDEX_NOT_READY:
         raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail=result.answer)
 
     return _to_response(result, took_ms=int((time.perf_counter() - started) * 1000))
